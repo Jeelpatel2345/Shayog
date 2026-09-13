@@ -14,6 +14,21 @@ export default function WelcomePage() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      const isLoggedIn = localStorage.getItem('sahyog-logged-in') === 'true';
+      const role = localStorage.getItem('sahyog-role');
+      if (isLoggedIn) {
+        if (role === 'WORKER') {
+          router.replace('/worker/dashboard');
+          return;
+        } else if (role === 'ADMIN') {
+          router.replace('/admin/overview');
+          return;
+        } else {
+          router.replace('/customer/dashboard');
+          return;
+        }
+      }
+
       const ua = navigator.userAgent;
       const isInsideApp = 
         ua.includes('SahYogApp') || 
@@ -22,7 +37,7 @@ export default function WelcomePage() {
         window.matchMedia('(display-mode: standalone)').matches;
       if (!isInsideApp) setShowDownload(true);
     }
-  }, []);
+  }, [router]);
 
   const handleNextStep = () => {
     setStep('SCOPE');

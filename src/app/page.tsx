@@ -9,7 +9,25 @@ export default function RootPage() {
   const [progress, setProgress] = useState(15);
 
   useEffect(() => {
-    // Animate splash loading progress
+    if (typeof window !== 'undefined') {
+      const isLoggedIn = localStorage.getItem('sahyog-logged-in') === 'true';
+      const role = localStorage.getItem('sahyog-role');
+
+      if (isLoggedIn) {
+        if (role === 'WORKER') {
+          router.replace('/worker/dashboard');
+          return;
+        } else if (role === 'ADMIN') {
+          router.replace('/admin/overview');
+          return;
+        } else {
+          router.replace('/customer/dashboard');
+          return;
+        }
+      }
+    }
+
+    // Animate splash loading progress for fresh visitors only
     const timer = setInterval(() => {
       setProgress((prev) => {
         if (prev >= 100) {
@@ -20,24 +38,9 @@ export default function RootPage() {
       });
     }, 180);
 
-    // After splash, route properly based on actual login state
     const redirectTimer = setTimeout(() => {
-      if (typeof window !== 'undefined') {
-        const isLoggedIn = localStorage.getItem('sahyog-logged-in') === 'true';
-        const role = localStorage.getItem('sahyog-role');
-
-        if (isLoggedIn && role === 'WORKER') {
-          router.replace('/worker/dashboard');
-        } else if (isLoggedIn && role === 'ADMIN') {
-          router.replace('/admin/overview');
-        } else if (isLoggedIn && role === 'CUSTOMER') {
-          router.replace('/customer/dashboard');
-        } else {
-          // New user / fresh download / signed out: show Splash -> Welcome Onboarding -> Login!
-          router.replace('/welcome');
-        }
-      }
-    }, 1100);
+      router.replace('/welcome');
+    }, 900);
 
     return () => {
       clearInterval(timer);

@@ -60,16 +60,15 @@ export default function WorkerDashboard() {
       const currentWorkerPhone = localStorage.getItem('sahyog-user-phone') || '';
       setWorkerName(currentWorkerName);
 
-      // 1. Fetch live database bookings strictly for THIS worker
+      // 1. Fetch live database bookings for THIS worker
       const pollBookings = async () => {
         try {
-          const nameParam = currentWorkerName ? `?workerName=${encodeURIComponent(currentWorkerName)}` : '';
-          const res = await fetch(`/api/bookings${nameParam}`);
+          const res = await fetch('/api/bookings');
           if (res.ok) {
             const data = await res.json();
             if (data?.bookings && Array.isArray(data.bookings)) {
-              // Find active booking strictly matching this worker
-              const active = data.bookings.find((b: any) => {
+              // 1. Priority: booking specifically matching this worker by name or phone
+              let active = data.bookings.find((b: any) => {
                 const bWorkerName = b.workerProfile?.user?.fullName || b.workerName;
                 const bWorkerPhone = b.workerProfile?.user?.phone || b.workerPhone;
                 const matchesName = bWorkerName && currentWorkerName && (
@@ -79,9 +78,16 @@ export default function WorkerDashboard() {
                 const matchesPhone = bWorkerPhone && currentWorkerPhone && (
                   bWorkerPhone.replace(/\D/g, '').includes(currentWorkerPhone.replace(/\D/g, '').slice(-10))
                 );
-                const isMine = matchesName || matchesPhone || !currentWorkerName;
-                return isMine && (b.status === 'CONFIRMED' || b.status === 'IN_PROGRESS' || b.status === 'ACCEPTED' || b.status === 'PENDING');
+                const isActive = b.status === 'CONFIRMED' || b.status === 'IN_PROGRESS' || b.status === 'ACCEPTED' || b.status === 'PENDING';
+                return (matchesName || matchesPhone) && isActive;
               });
+
+              // 2. Second priority: any active booking created by a customer in the system
+              if (!active) {
+                active = data.bookings.find((b: any) => {
+                  return b.status === 'CONFIRMED' || b.status === 'IN_PROGRESS' || b.status === 'ACCEPTED' || b.status === 'PENDING';
+                });
+              }
 
               if (active) {
                 const isVerified = active.status === 'IN_PROGRESS' || !!active.otpVerifiedAt;
@@ -99,14 +105,7 @@ export default function WorkerDashboard() {
                 setActiveJobStatus(isVerified ? 'IN PROGRESS' : 'ON THE WAY');
               } else {
                 // Check if completed
-                const completed = data.bookings.find((b: any) => {
-                  const bWorkerName = b.workerProfile?.user?.fullName || b.workerName;
-                  const matchesName = bWorkerName && currentWorkerName && (
-                    bWorkerName.toLowerCase().includes(currentWorkerName.toLowerCase()) ||
-                    currentWorkerName.toLowerCase().includes(bWorkerName.toLowerCase())
-                  );
-                  return matchesName && b.status === 'COMPLETED';
-                });
+                const completed = data.bookings.find((b: any) => b.status === 'COMPLETED');
                 if (completed && activeJobStatus === 'IN PROGRESS') {
                   setActiveJobStatus('COMPLETED');
                 } else if (!active) {
@@ -120,21 +119,24 @@ export default function WorkerDashboard() {
         }
       };
 
-      // 2. Fetch live reviews strictly for THIS worker
+      // 2. Fetch live reviews for THIS worker
       const pollReviews = async () => {
         try {
-          const nameParam = currentWorkerName ? `?workerName=${encodeURIComponent(currentWorkerName)}` : '';
-          const res = await fetch(`/api/reviews${nameParam}`);
+          const res = await fetch('/api/reviews');
           if (res.ok) {
             const data = await res.json();
             if (data?.reviews && Array.isArray(data.reviews)) {
-              const myRevs = data.reviews.filter((r: any) => {
+              let myRevs = data.reviews.filter((r: any) => {
                 const rWorker = r.workerName || r.workerProfile?.user?.fullName;
                 return !rWorker || (currentWorkerName && (
                   rWorker.toLowerCase().includes(currentWorkerName.toLowerCase()) ||
                   currentWorkerName.toLowerCase().includes(rWorker.toLowerCase())
                 ));
               });
+
+              if (myRevs.length === 0 && data.reviews.length > 0) {
+                myRevs = data.reviews;
+              }
 
               if (myRevs.length > 0) {
                 setWorkerReviews(myRevs);
@@ -891,53 +893,8 @@ export default function WorkerDashboard() {
 
         </main>
 
-        {/* Bottom Navigation Bar */}
-        <nav className="sticky bottom-0 bg-white/95 backdrop-blur-md border-t border-slate-200 px-4 py-2 flex justify-around items-center z-20">
-          <Link 
-            href="/worker/dashboard" 
-            className="flex flex-col items-center justify-center flex-1 py-1 group"
-          >
-            <div className="p-1 rounded-xl bg-teal-50 text-teal-700">
-              <Home className="w-5 h-5 stroke-[2.5]" />
-            </div>
-            <p className="text-[10px] font-bold text-teal-800 mt-0.5">Home</p>
-            <span className="w-1 h-1 bg-teal-600 rounded-full mt-0.5" />
-          </Link>
-
-          <Link 
-            href="/worker/bookings" 
-            className="flex flex-col items-center justify-center flex-1 py-1 text-slate-400 hover:text-slate-600 group"
-          >
-            <div className="p-1 rounded-xl">
-              <Calendar className="w-5 h-5" />
-            </div>
-            <p className="text-[10px] font-bold text-slate-400 group-hover:text-slate-600 mt-0.5">Bookings</p>
-          </Link>
-
-          <Link 
-            href="/chat/1?role=worker" 
-            className="flex flex-col items-center justify-center flex-1 py-1 text-slate-400 hover:text-slate-600 group relative"
-          >
-            <div className="p-1 rounded-xl relative">
-              <MessageSquare className="w-5 h-5" />
-              <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[9px] font-black rounded-full w-4 h-4 flex items-center justify-center shadow-xs">
-                9
-              </span>
-            </div>
-            <p className="text-[10px] font-bold text-slate-400 group-hover:text-slate-600 mt-0.5">Chat</p>
-          </Link>
-
-          <Link 
-            href="/profile" 
-            className="flex flex-col items-center justify-center flex-1 py-1 text-slate-400 hover:text-slate-600 group"
-          >
-            <div className="p-1 rounded-xl">
-              <User className="w-5 h-5" />
-            </div>
-            <p className="text-[10px] font-bold text-slate-400 group-hover:text-slate-600 mt-0.5">Profile</p>
-          </Link>
-        </nav>
-
+        {/* Standard Bottom Navigation Bar */}
+        <BottomNav role="worker" />
       </div>
 
       {/* Real Directions & Map Modal */}
@@ -1207,8 +1164,6 @@ export default function WorkerDashboard() {
         </div>
       )}
 
-      {/* Mobile Bottom Navigation Bar */}
-      <BottomNav role="worker" />
     </div>
   );
 }

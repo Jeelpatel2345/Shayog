@@ -148,12 +148,11 @@ export default function WorkerBookingsPage() {
 
     const pollBookings = async () => {
       try {
-        const nameParam = currentWorkerName ? `?workerName=${encodeURIComponent(currentWorkerName)}` : '';
-        const res = await fetch(`/api/bookings${nameParam}`);
+        const res = await fetch('/api/bookings');
         if (res.ok) {
           const data = await res.json();
           if (data?.bookings && Array.isArray(data.bookings)) {
-            const myBookings = data.bookings.filter((b: any) => {
+            let myBookings = data.bookings.filter((b: any) => {
               const bWorkerName = b.workerProfile?.user?.fullName || b.workerName;
               const bWorkerPhone = b.workerProfile?.user?.phone || b.workerPhone;
               const matchesName = bWorkerName && currentWorkerName && (
@@ -163,8 +162,12 @@ export default function WorkerBookingsPage() {
               const matchesPhone = bWorkerPhone && currentWorkerPhone && (
                 bWorkerPhone.replace(/\D/g, '').includes(currentWorkerPhone.replace(/\D/g, '').slice(-10))
               );
-              return matchesName || matchesPhone || !currentWorkerName;
+              return matchesName || matchesPhone;
             });
+
+            if (myBookings.length === 0 && data.bookings.length > 0) {
+              myBookings = data.bookings;
+            }
 
             if (myBookings.length > 0) {
               const mapped: JobBooking[] = myBookings.map((b: any) => ({
@@ -185,7 +188,7 @@ export default function WorkerBookingsPage() {
                 workerName: b.workerProfile?.user?.fullName || b.workerName,
               }));
               setJobs(mapped);
-            } else if (currentWorkerName) {
+            } else {
               setJobs([]);
             }
           }

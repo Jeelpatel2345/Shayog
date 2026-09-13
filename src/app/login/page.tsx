@@ -41,16 +41,18 @@ export default function LoginPage() {
       // Only auto-redirect if NOT switching accounts and NO explicit role was requested
       if (!isSwitch && !requestedRole) {
         const storedRole = localStorage.getItem('sahyog-role');
-        const storedUserId = localStorage.getItem('sahyog-user-phone');
-        if (storedRole && storedUserId) {
+        const isLoggedIn = localStorage.getItem('sahyog-logged-in') === 'true';
+        if (isLoggedIn) {
           if (storedRole === 'WORKER') {
             router.replace('/worker/dashboard');
+            return;
           } else if (storedRole === 'ADMIN') {
             router.replace('/admin/overview');
+            return;
           } else {
             router.replace('/customer/dashboard');
+            return;
           }
-          return;
         }
       }
 
