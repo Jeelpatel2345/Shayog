@@ -304,18 +304,6 @@ export default function CustomerDashboard() {
 
           {/* User Profile Badge */}
           <div className="flex items-center gap-3">
-            <Link
-              href="/worker/dashboard"
-              onClick={() => {
-                if (typeof window !== 'undefined') localStorage.setItem('sahyog-role', 'WORKER');
-              }}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-400 hover:bg-amber-300 text-emerald-950 font-bold text-xs rounded-full shadow-sm transition"
-              title="Switch to Worker Partner Mode"
-            >
-              <span>Worker Mode</span>
-              <span>🛠️</span>
-            </Link>
-
             <Link href="/notifications" className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition text-white relative" title="Notifications">
               <Bell className="w-4 h-4" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-amber-400 rounded-full" />
@@ -348,16 +336,6 @@ export default function CustomerDashboard() {
             </div>
 
             <div className="flex items-center gap-2">
-              <Link
-                href="/worker/dashboard"
-                onClick={() => {
-                  if (typeof window !== 'undefined') localStorage.setItem('sahyog-role', 'WORKER');
-                }}
-                className="px-2.5 py-1 bg-amber-400 text-emerald-950 font-bold text-[11px] rounded-full hover:bg-amber-300 transition flex items-center gap-1 shadow-sm"
-              >
-                <span>Worker</span>
-                <span>🛠️</span>
-              </Link>
               <Link href="/notifications" className="p-2 rounded-full bg-white/10 text-white relative" title="Notifications">
                 <Bell className="w-4 h-4" />
                 <span className="absolute top-1 right-1 w-2 h-2 bg-amber-400 rounded-full" />

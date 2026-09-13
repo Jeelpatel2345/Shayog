@@ -389,19 +389,7 @@ export default function WorkerDashboard() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Link
-              href="/customer/dashboard"
-              onClick={() => {
-                if (typeof window !== 'undefined') localStorage.setItem('sahyog-role', 'CUSTOMER');
-              }}
-              className="px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 transition rounded-full text-xs font-bold flex items-center gap-1 shadow-2xs"
-              title="Switch to Customer Mode"
-            >
-              <span>Customer</span>
-              <span>👤</span>
-            </Link>
-
+          <div className="flex items-center gap-2.5">
             <Link 
               href="/notifications" 
               className="p-2 rounded-full hover:bg-slate-100 text-slate-600 transition relative"
