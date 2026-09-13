@@ -5,10 +5,11 @@ import Link from 'next/link';
 import { 
   Globe, ChevronRight, Shield, Lock, CheckCircle, Smartphone, 
   Loader2, ArrowRight, Sparkles, MessageSquare, AlertCircle, RefreshCw, User, Briefcase,
-  Users, Building2, Wrench, HardHat, Check
+  Users, Building2, Wrench, HardHat, Check, FileText, CheckSquare, Square, Stamp,
+  Mail, MapPin, Calendar, PenTool
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
-import { registeredSocieties } from '@/data/communityData';
+import { registeredSocieties, communityWorkerTypeOptions } from '@/data/communityData';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -17,18 +18,51 @@ export default function LoginPage() {
   const [phone, setPhone] = useState('');
   const [selectedRole, setSelectedRole] = useState<'CUSTOMER' | 'WORKER'>('CUSTOMER');
   
-  // Community Squad Options
+  // Community Squad Options & Official Registration Form
   const [workerType, setWorkerType] = useState<'INDIVIDUAL' | 'COMMUNITY'>('INDIVIDUAL');
-  const [societyName, setSocietyName] = useState('Shanti Heights Resident Society');
-  const [customSociety, setCustomSociety] = useState('');
-  const [squadName, setSquadName] = useState('');
-  const [crewSize, setCrewSize] = useState('4 Workers Squad');
-  const [serviceSpecialty, setServiceSpecialty] = useState('Overhead & Underground Water Tank Disinfection');
-  const [equipmentGear, setEquipmentGear] = useState<string[]>([
-    'High-Pressure Jet Washer',
-    'UV Disinfection Lamp',
-    'Safety Harnesses & Helmets'
+  
+  // COMMUNITY DETAILS
+  const [communityName, setCommunityName] = useState('Shanti Heights Resident Society');
+  const [customCommunityName, setCustomCommunityName] = useState('');
+  const [communityType, setCommunityType] = useState('Cooperative Housing Society');
+  const [fullAddress, setFullAddress] = useState('Plot 42, Sector 12, Near Commerce Six Roads, Navrangpura');
+  const [city, setCity] = useState('Ahmedabad');
+  const [district, setDistrict] = useState('Ahmedabad Urban');
+  const [stateName, setStateName] = useState('Gujarat');
+  const [pincode, setPincode] = useState('380009');
+
+  // AUTHORIZED REPRESENTATIVE
+  const [repName, setRepName] = useState('Kiritbhai Shah');
+  const [repDesignation, setRepDesignation] = useState('Chairman');
+  const [repMobile, setRepMobile] = useState('+91 98250 11223');
+  const [repEmail, setRepEmail] = useState('chairman@shantiheights.org');
+
+  // WORKER TYPES IN COMMUNITY
+  const [selectedWorkerTypes, setSelectedWorkerTypes] = useState<string[]>([
+    'Water Tank & Plumbing Technicians',
+    'Substation & High-Voltage Electricians',
+    'Common Area Deep Jetting & Sanitization',
+    'Lift, Elevator & DG Set Operators'
   ]);
+
+  // SUPPORTING INFORMATION
+  const [registrationNumber, setRegistrationNumber] = useState('GUJ/AHM/2018/4891');
+  const [registrationAuthority, setRegistrationAuthority] = useState('District Registrar of Co-operative Societies, Ahmedabad');
+  const [attachedProofs, setAttachedProofs] = useState<string[]>([
+    'Registration Certificate',
+    'Society/Association Document',
+    'Cooperative Certificate'
+  ]);
+  const [hasCommunitySeal, setHasCommunitySeal] = useState(true);
+
+  // COMMUNITY DECLARATION
+  const [repSignature, setRepSignature] = useState('Kiritbhai R. Shah');
+  const [declarationDate, setDeclarationDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [declarationAccepted, setDeclarationAccepted] = useState(true);
+
+  // Squad specifics
+  const [squadName, setSquadName] = useState('Shanti Heights Community Squad');
+  const [crewSize, setCrewSize] = useState('4 Workers Squad');
 
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState(['', '', '', '']);
@@ -38,6 +72,44 @@ export default function LoginPage() {
   const [showTwilioNotification, setShowTwilioNotification] = useState(false);
   const [countdown, setCountdown] = useState(30);
   const [canResend, setCanResend] = useState(false);
+
+  // Sync selected society with form fields
+  const handleSelectSociety = (socName: string) => {
+    setCommunityName(socName);
+    if (socName === 'CUSTOM') {
+      setCustomCommunityName('');
+      return;
+    }
+    const soc = registeredSocieties.find(s => s.name === socName);
+    if (soc) {
+      setCommunityType(soc.communityType || 'Cooperative Housing Society');
+      setFullAddress(soc.fullAddress || `${soc.locality}, ${soc.city}`);
+      setCity(soc.city);
+      setDistrict(soc.district || `${soc.city} Urban`);
+      setStateName(soc.state || 'Gujarat');
+      setPincode(soc.pincode || '380001');
+      if (soc.authorizedRepresentative) {
+        setRepName(soc.authorizedRepresentative.name);
+        setRepDesignation(soc.authorizedRepresentative.designation);
+        setRepMobile(soc.authorizedRepresentative.mobile);
+        setRepEmail(soc.authorizedRepresentative.email);
+      }
+      if (soc.supportingInfo) {
+        setRegistrationNumber(soc.supportingInfo.registrationNumber || soc.societyRegNo);
+        setRegistrationAuthority(soc.supportingInfo.registrationAuthority || 'Registrar of Societies');
+        setAttachedProofs(soc.supportingInfo.attachedProof || ['Registration Certificate']);
+        setHasCommunitySeal(soc.supportingInfo.hasCommunitySeal ?? true);
+      }
+      if (soc.declaration) {
+        setRepSignature(soc.declaration.signature);
+        setDeclarationDate(soc.declaration.date || new Date().toISOString().split('T')[0]);
+      }
+      if (soc.availableWorkerTypes) {
+        setSelectedWorkerTypes(soc.availableWorkerTypes);
+      }
+      setSquadName(`${soc.shortName} Community Squad`);
+    }
+  };
 
   // Auto-redirect if already logged in (critical for APK WebView experience)
   useEffect(() => {
@@ -190,8 +262,8 @@ export default function LoginPage() {
 
       // Auto-register worker in DB & local store so search finds them immediately!
       if (assignedRole === 'WORKER') {
-        const finalSociety = customSociety.trim() || societyName;
-        const finalSquad = squadName.trim() || `${userFullName} Squad`;
+        const finalCommunity = (communityName === 'CUSTOM' ? customCommunityName : communityName) || 'Shanti Heights Resident Society';
+        const finalSquad = squadName.trim() || `${finalCommunity} Squad`;
 
         try {
           await fetch('/api/workers', {
@@ -200,20 +272,53 @@ export default function LoginPage() {
             body: JSON.stringify({
               fullName: userFullName,
               phone: data.user.phone,
-              city: workerType === 'COMMUNITY' ? finalSociety : 'Ahmedabad',
-              skills: workerType === 'COMMUNITY' ? [serviceSpecialty, 'Community Squad Lead'] : ['Home Specialist', 'Electrician', 'Plumber'],
+              city: workerType === 'COMMUNITY' ? finalCommunity : 'Ahmedabad',
+              skills: workerType === 'COMMUNITY' ? selectedWorkerTypes : ['Home Specialist', 'Electrician', 'Plumber'],
               hourlyRate: workerType === 'COMMUNITY' ? 450 : 350,
               bio: workerType === 'COMMUNITY' 
-                ? `Squad Leader for ${finalSociety} (${crewSize}, Industrial Gear: ${equipmentGear.join(', ')})`
+                ? `Authorized Representative & Lead for ${finalCommunity} (${crewSize}, Type: ${communityType})`
                 : 'Verified professional home service partner on SahYog.',
             }),
           });
         } catch {}
 
         if (workerType === 'COMMUNITY') {
+          const communityProfile = {
+            communityName: finalCommunity,
+            communityType,
+            fullAddress,
+            city,
+            district,
+            state: stateName,
+            pincode,
+            authorizedRepresentative: {
+              name: repName || userFullName,
+              designation: repDesignation,
+              mobile: repMobile || data.user.phone,
+              email: repEmail,
+            },
+            declaration: {
+              statement: 'I declare that I am authorized to represent the above-mentioned community and that the information provided is true and correct.',
+              signature: repSignature || userFullName,
+              date: declarationDate,
+              isAccepted: declarationAccepted,
+            },
+            supportingInfo: {
+              registrationNumber,
+              registrationAuthority,
+              attachedProof: attachedProofs,
+              representativeSignature: repSignature || userFullName,
+              hasCommunitySeal,
+            },
+            availableWorkerTypes: selectedWorkerTypes,
+            squadName: finalSquad,
+            crewSize,
+          };
+
           localStorage.setItem('sahyog_worker_mode', 'COMMUNITY');
           localStorage.setItem('sahyog_squad_name', finalSquad);
-          localStorage.setItem('sahyog_society_name', finalSociety);
+          localStorage.setItem('sahyog_society_name', finalCommunity);
+          localStorage.setItem('sahyog_registered_community', JSON.stringify(communityProfile));
           router.push('/worker/community');
           return;
         } else {
@@ -343,7 +448,7 @@ export default function LoginPage() {
         </div>
 
         {/* Right Interactive Form Card */}
-        <div className="p-5 sm:p-8 flex flex-col justify-between bg-white">
+        <div className="p-4 sm:p-7 flex flex-col justify-between bg-white max-h-[92vh] overflow-y-auto no-scrollbar">
           <div>
             <div className="flex justify-between items-center mb-4">
               <span className="text-[11px] font-bold uppercase tracking-wider text-teal-800 bg-teal-50 px-2.5 py-1 rounded-md border border-teal-200">
@@ -481,131 +586,393 @@ export default function LoginPage() {
 
                 {/* Community Specific Details */}
                 {selectedRole === 'WORKER' && workerType === 'COMMUNITY' && (
-                  <div className="p-3.5 bg-amber-50/60 rounded-2xl border border-amber-200/80 space-y-3 animate-in fade-in">
-                    <div className="flex items-center gap-1.5 text-amber-900 text-xs font-black">
-                      <Building2 className="w-4 h-4 text-amber-700" />
-                      <span>Community & Housing Society Information</span>
-                    </div>
-
-                    {/* Society Selector */}
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                        Housing Society / Apartment Complex
-                      </label>
-                      <select
-                        value={societyName}
-                        onChange={(e) => setSocietyName(e.target.value)}
-                        className="w-full border-2 border-amber-200 bg-white rounded-xl p-2 text-xs font-semibold text-slate-800 outline-none"
-                      >
-                        {registeredSocieties.map((s) => (
-                          <option key={s.id} value={s.name}>
-                            {s.name} ({s.locality})
-                          </option>
-                        ))}
-                        <option value="CUSTOM">Other / Custom Society Name...</option>
-                      </select>
-                      {societyName === 'CUSTOM' && (
-                        <input
-                          type="text"
-                          value={customSociety}
-                          onChange={(e) => setCustomSociety(e.target.value)}
-                          placeholder="Enter your society or community name"
-                          className="w-full mt-2 border-2 border-amber-300 bg-white rounded-xl p-2 text-xs font-semibold text-slate-900 outline-none"
-                        />
-                      )}
-                    </div>
-
-                    {/* Squad Name & Crew Size */}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                          Squad Name
-                        </label>
-                        <input
-                          type="text"
-                          value={squadName}
-                          onChange={(e) => setSquadName(e.target.value)}
-                          placeholder="e.g. Rapid Clean Crew"
-                          className="w-full border-2 border-amber-200 bg-white rounded-xl p-2 text-xs font-semibold text-slate-800 outline-none"
-                        />
+                  <div className="p-3 sm:p-4 bg-slate-50 rounded-2xl border-2 border-amber-300 space-y-4 animate-in fade-in">
+                    <div className="flex items-center justify-between border-b border-amber-200 pb-2">
+                      <div className="flex items-center gap-1.5 text-teal-950 text-xs font-black">
+                        <Building2 className="w-4 h-4 text-amber-600" />
+                        <span>OFFICIAL COMMUNITY REGISTRATION</span>
                       </div>
+                      <span className="text-[10px] bg-amber-400 text-teal-950 font-black px-2 py-0.5 rounded-md">
+                        Authorized Portal
+                      </span>
+                    </div>
+
+                    {/* SECTION 1: COMMUNITY DETAILS */}
+                    <div className="space-y-2.5">
+                      <div className="flex items-center gap-1.5 text-[11px] font-black uppercase text-teal-900 tracking-wider">
+                        <Building2 className="w-3.5 h-3.5 text-teal-700" />
+                        <span>COMMUNITY DETAILS</span>
+                      </div>
+
+                      {/* Community Name Selector */}
                       <div>
                         <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                          Crew Size
+                          Community Name:
                         </label>
                         <select
-                          value={crewSize}
-                          onChange={(e) => setCrewSize(e.target.value)}
-                          className="w-full border-2 border-amber-200 bg-white rounded-xl p-2 text-xs font-semibold text-slate-800 outline-none"
+                          value={communityName}
+                          onChange={(e) => handleSelectSociety(e.target.value)}
+                          className="w-full border border-slate-300 bg-white rounded-xl p-2 text-xs font-semibold text-slate-800 outline-none focus:border-teal-600"
                         >
-                          <option value="4 Workers Squad">4 Workers Squad</option>
-                          <option value="6 Workers Squad">6 Workers Squad</option>
-                          <option value="8 Workers Squad">8 Workers Squad</option>
-                          <option value="10+ Workers Squad">10+ Workers Squad</option>
+                          {registeredSocieties.map((s) => (
+                            <option key={s.id} value={s.name}>
+                              {s.name} ({s.locality}, {s.city})
+                            </option>
+                          ))}
+                          <option value="CUSTOM">Other / Custom Community Name...</option>
                         </select>
+                        {communityName === 'CUSTOM' && (
+                          <input
+                            type="text"
+                            value={customCommunityName}
+                            onChange={(e) => setCustomCommunityName(e.target.value)}
+                            placeholder="Enter Community Name"
+                            className="w-full mt-2 border border-slate-300 bg-white rounded-xl p-2 text-xs font-semibold text-slate-900 outline-none focus:border-teal-600"
+                          />
+                        )}
+                      </div>
+
+                      {/* Community Type */}
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Community Type:
+                        </label>
+                        <select
+                          value={communityType}
+                          onChange={(e) => setCommunityType(e.target.value)}
+                          className="w-full border border-slate-300 bg-white rounded-xl p-2 text-xs font-semibold text-slate-800 outline-none focus:border-teal-600"
+                        >
+                          <option value="Cooperative Housing Society">Cooperative Housing Society</option>
+                          <option value="Gated Residential Society">Gated Residential Society</option>
+                          <option value="Apartment Owners Association (AOA)">Apartment Owners Association (AOA)</option>
+                          <option value="Commercial Complex / Tech Park">Commercial Complex / Tech Park</option>
+                          <option value="Township / Mixed Development">Township / Mixed Development</option>
+                        </select>
+                      </div>
+
+                      {/* Full Address */}
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Full Address:
+                        </label>
+                        <input
+                          type="text"
+                          value={fullAddress}
+                          onChange={(e) => setFullAddress(e.target.value)}
+                          placeholder="Building, street, landmark"
+                          className="w-full border border-slate-300 bg-white rounded-xl p-2 text-xs font-semibold text-slate-800 outline-none focus:border-teal-600"
+                        />
+                      </div>
+
+                      {/* City & District */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                            City:
+                          </label>
+                          <input
+                            type="text"
+                            value={city}
+                            onChange={(e) => setCity(e.target.value)}
+                            className="w-full border border-slate-300 bg-white rounded-xl p-2 text-xs font-semibold text-slate-800 outline-none focus:border-teal-600"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                            District:
+                          </label>
+                          <input
+                            type="text"
+                            value={district}
+                            onChange={(e) => setDistrict(e.target.value)}
+                            className="w-full border border-slate-300 bg-white rounded-xl p-2 text-xs font-semibold text-slate-800 outline-none focus:border-teal-600"
+                          />
+                        </div>
+                      </div>
+
+                      {/* State & PIN Code */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                            State:
+                          </label>
+                          <input
+                            type="text"
+                            value={stateName}
+                            onChange={(e) => setStateName(e.target.value)}
+                            className="w-full border border-slate-300 bg-white rounded-xl p-2 text-xs font-semibold text-slate-800 outline-none focus:border-teal-600"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                            PIN Code:
+                          </label>
+                          <input
+                            type="text"
+                            maxLength={6}
+                            value={pincode}
+                            onChange={(e) => setPincode(e.target.value.replace(/\D/g, ''))}
+                            placeholder="e.g. 380009"
+                            className="w-full border border-slate-300 bg-white rounded-xl p-2 text-xs font-semibold text-slate-800 outline-none focus:border-teal-600"
+                          />
+                        </div>
                       </div>
                     </div>
 
-                    {/* Specialty */}
-                    <div>
-                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
-                        Primary Society Service
-                      </label>
-                      <select
-                        value={serviceSpecialty}
-                        onChange={(e) => setServiceSpecialty(e.target.value)}
-                        className="w-full border-2 border-amber-200 bg-white rounded-xl p-2 text-xs font-semibold text-slate-800 outline-none"
-                      >
-                        <option value="Overhead & Underground Water Tank Disinfection">
-                          💧 Water Tank Disinfection (Overhead & Underground)
-                        </option>
-                        <option value="Society Substation & Electrical AMC">
-                          ⚡ Society Electrical AMC & Pump Maintenance
-                        </option>
-                        <option value="Common Area Jet Washing & Sanitization">
-                          🧹 Common Area High-Pressure Jetting & Buffing
-                        </option>
-                        <option value="Storm Drainage & Underground Pipeline Jetting">
-                          🚿 Storm Drainage & Underground Pipeline Jetting
-                        </option>
-                      </select>
+                    {/* SECTION 2: AUTHORIZED REPRESENTATIVE */}
+                    <div className="space-y-2.5 pt-3 border-t border-slate-200">
+                      <div className="flex items-center gap-1.5 text-[11px] font-black uppercase text-teal-900 tracking-wider">
+                        <User className="w-3.5 h-3.5 text-teal-700" />
+                        <span>AUTHORIZED REPRESENTATIVE</span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                            Name:
+                          </label>
+                          <input
+                            type="text"
+                            value={repName}
+                            onChange={(e) => setRepName(e.target.value)}
+                            placeholder="Full name of representative"
+                            className="w-full border border-slate-300 bg-white rounded-xl p-2 text-xs font-semibold text-slate-800 outline-none focus:border-teal-600"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                            Designation/Role:
+                          </label>
+                          <input
+                            type="text"
+                            value={repDesignation}
+                            onChange={(e) => setRepDesignation(e.target.value)}
+                            placeholder="e.g. Chairman / Secretary / Estate Manager"
+                            className="w-full border border-slate-300 bg-white rounded-xl p-2 text-xs font-semibold text-slate-800 outline-none focus:border-teal-600"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                            Mobile Number:
+                          </label>
+                          <input
+                            type="tel"
+                            value={repMobile}
+                            onChange={(e) => setRepMobile(e.target.value)}
+                            placeholder="+91 98250 11223"
+                            className="w-full border border-slate-300 bg-white rounded-xl p-2 text-xs font-semibold text-slate-800 outline-none focus:border-teal-600"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                            Email:
+                          </label>
+                          <input
+                            type="email"
+                            value={repEmail}
+                            onChange={(e) => setRepEmail(e.target.value)}
+                            placeholder="representative@community.org"
+                            className="w-full border border-slate-300 bg-white rounded-xl p-2 text-xs font-semibold text-slate-800 outline-none focus:border-teal-600"
+                          />
+                        </div>
+                      </div>
                     </div>
 
-                    {/* Available Gear */}
-                    <div>
-                      <label className="block text-[10px] font-bold text-slate-600 mb-1">
-                        Industrial Equipment Available
-                      </label>
-                      <div className="flex flex-wrap gap-1.5">
-                        {[
-                          'High-Pressure Jet Washer',
-                          'UV Disinfection Lamp',
-                          'Submersible Drainage Pump',
-                          'Safety Harnesses & Helmets',
-                          'Multi-Meter & Phase Tester'
-                        ].map((gear) => {
-                          const active = equipmentGear.includes(gear);
+                    {/* SECTION 3: WORKER TYPES IN COMMUNITY */}
+                    <div className="space-y-2.5 pt-3 border-t border-slate-200">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 text-[11px] font-black uppercase text-teal-900 tracking-wider">
+                          <Wrench className="w-3.5 h-3.5 text-amber-600" />
+                          <span>WORKER TYPES IN COMMUNITY</span>
+                        </div>
+                        <span className="text-[10px] font-bold text-teal-700">
+                          {selectedWorkerTypes.length} Selected
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500">
+                        Select all worker specialties available in your community squad:
+                      </p>
+
+                      <div className="space-y-1.5">
+                        {communityWorkerTypeOptions.map((typeOption) => {
+                          const isSelected = selectedWorkerTypes.includes(typeOption);
                           return (
                             <button
-                              key={gear}
+                              key={typeOption}
                               type="button"
                               onClick={() => {
-                                setEquipmentGear((prev) =>
-                                  prev.includes(gear) ? prev.filter((g) => g !== gear) : [...prev, gear]
+                                setSelectedWorkerTypes(prev =>
+                                  isSelected ? prev.filter(t => t !== typeOption) : [...prev, typeOption]
                                 );
                               }}
-                              className={`text-[10px] px-2 py-1 rounded-lg border font-semibold flex items-center gap-1 transition ${
-                                active
-                                  ? 'bg-amber-400 text-teal-950 border-amber-500 shadow-xs'
-                                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                              className={`w-full text-left p-2 rounded-xl text-xs font-medium border flex items-center gap-2.5 transition cursor-pointer ${
+                                isSelected
+                                  ? 'bg-amber-50 border-amber-400 text-teal-950 font-bold shadow-xs'
+                                  : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100'
                               }`}
                             >
-                              {active && <Check className="w-2.5 h-2.5" />}
-                              <span>{gear}</span>
+                              {isSelected ? (
+                                <CheckSquare className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                              ) : (
+                                <Square className="w-4 h-4 text-slate-300 flex-shrink-0" />
+                              )}
+                              <span>{typeOption}</span>
                             </button>
                           );
                         })}
                       </div>
+                    </div>
+
+                    {/* SECTION 4: SUPPORTING INFORMATION */}
+                    <div className="space-y-2.5 pt-3 border-t border-slate-200">
+                      <div className="flex items-center gap-1.5 text-[11px] font-black uppercase text-teal-900 tracking-wider">
+                        <FileText className="w-3.5 h-3.5 text-teal-700" />
+                        <span>SUPPORTING INFORMATION</span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                            Registration Number (if applicable):
+                          </label>
+                          <input
+                            type="text"
+                            value={registrationNumber}
+                            onChange={(e) => setRegistrationNumber(e.target.value)}
+                            placeholder="e.g. GUJ/AHM/2018/4891"
+                            className="w-full border border-slate-300 bg-white rounded-xl p-2 text-xs font-semibold text-slate-800 outline-none focus:border-teal-600"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                            Registration Authority (if applicable):
+                          </label>
+                          <input
+                            type="text"
+                            value={registrationAuthority}
+                            onChange={(e) => setRegistrationAuthority(e.target.value)}
+                            placeholder="e.g. Registrar of Co-op Societies"
+                            className="w-full border border-slate-300 bg-white rounded-xl p-2 text-xs font-semibold text-slate-800 outline-none focus:border-teal-600"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Attached Supporting Proof */}
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1.5">
+                          Attached Supporting Proof:
+                        </label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                          {[
+                            'Registration Certificate',
+                            'Society/Association Document',
+                            'Cooperative Certificate',
+                            'Local Authority Document',
+                            'Other Official Document',
+                            'Not Applicable'
+                          ].map((proof) => {
+                            const isChecked = attachedProofs.includes(proof);
+                            return (
+                              <button
+                                key={proof}
+                                type="button"
+                                onClick={() => {
+                                  if (proof === 'Not Applicable') {
+                                    setAttachedProofs(['Not Applicable']);
+                                    return;
+                                  }
+                                  setAttachedProofs(prev => {
+                                    const filtered = prev.filter(p => p !== 'Not Applicable');
+                                    return filtered.includes(proof)
+                                      ? filtered.filter(p => p !== proof)
+                                      : [...filtered, proof];
+                                  });
+                                }}
+                                className={`text-left p-1.5 rounded-lg text-[11px] border flex items-center gap-1.5 transition cursor-pointer ${
+                                  isChecked
+                                    ? 'bg-emerald-50 border-emerald-400 text-emerald-950 font-bold'
+                                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100'
+                                }`}
+                              >
+                                {isChecked ? (
+                                  <CheckSquare className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                                ) : (
+                                  <Square className="w-3.5 h-3.5 text-slate-300 flex-shrink-0" />
+                                )}
+                                <span className="truncate">{proof}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Community Seal */}
+                      <button
+                        type="button"
+                        onClick={() => setHasCommunitySeal(!hasCommunitySeal)}
+                        className={`w-full text-left p-2 rounded-xl text-xs border flex items-center gap-2 transition cursor-pointer ${
+                          hasCommunitySeal
+                            ? 'bg-amber-50 border-amber-400 text-teal-950 font-bold'
+                            : 'bg-white border-slate-200 text-slate-600'
+                        }`}
+                      >
+                        <Stamp className="w-4 h-4 text-amber-600 flex-shrink-0" />
+                        <span>Community Seal (if available): {hasCommunitySeal ? '✓ Affixed / Verified' : 'None'}</span>
+                      </button>
+                    </div>
+
+                    {/* SECTION 5: COMMUNITY DECLARATION */}
+                    <div className="space-y-2.5 pt-3 border-t-2 border-amber-300 bg-amber-50/50 p-3 rounded-xl">
+                      <div className="flex items-center gap-1.5 text-[11px] font-black uppercase text-amber-950 tracking-wider">
+                        <PenTool className="w-3.5 h-3.5 text-amber-700" />
+                        <span>COMMUNITY DECLARATION</span>
+                      </div>
+
+                      <blockquote className="text-[11px] italic text-slate-700 border-l-2 border-amber-500 pl-2 py-0.5 leading-relaxed bg-white/60 rounded-r-md">
+                        &ldquo;I declare that I am authorized to represent the above-mentioned community and that the information provided is true and correct.&rdquo;
+                      </blockquote>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                            Signature:
+                          </label>
+                          <input
+                            type="text"
+                            value={repSignature}
+                            onChange={(e) => setRepSignature(e.target.value)}
+                            placeholder="Type Representative Full Name"
+                            className="w-full border border-amber-300 bg-white rounded-xl p-2 text-xs font-semibold text-slate-900 outline-none focus:border-teal-600 font-serif"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                            Date:
+                          </label>
+                          <input
+                            type="date"
+                            value={declarationDate}
+                            onChange={(e) => setDeclarationDate(e.target.value)}
+                            className="w-full border border-amber-300 bg-white rounded-xl p-2 text-xs font-semibold text-slate-800 outline-none focus:border-teal-600"
+                          />
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setDeclarationAccepted(!declarationAccepted)}
+                        className="flex items-center gap-2 text-xs font-bold text-slate-800 cursor-pointer pt-1"
+                      >
+                        {declarationAccepted ? (
+                          <CheckSquare className="w-4 h-4 text-emerald-600" />
+                        ) : (
+                          <Square className="w-4 h-4 text-slate-400" />
+                        )}
+                        <span>I accept and affirm this Community Declaration</span>
+                      </button>
                     </div>
                   </div>
                 )}

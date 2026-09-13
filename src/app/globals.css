@@ -2,6 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 :root { --background: #f9fafb; --foreground: #111827; }
-body { color: var(--foreground); background: var(--background); -webkit-font-smoothing: antialiased; }
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+  width: 100%;
+}
+body {
+  color: var(--foreground);
+  background: var(--background);
+  -webkit-font-smoothing: antialiased;
+}
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

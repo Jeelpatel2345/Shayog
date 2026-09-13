@@ -6,7 +6,8 @@ import {
   Calendar, User, Sparkles, Wrench, Zap, Cpu, Hammer, 
   Paintbrush, ArrowRight, Heart, Award, Shield, CheckCircle, Clock,
   ThumbsUp, X, MessageSquare, CheckCircle2, Users, LogOut, Building2,
-  Phone, KeyRound, HardHat, Check, Loader2
+  Phone, KeyRound, HardHat, Check, Loader2, FileText, Stamp, CheckSquare,
+  ChevronDown, ChevronUp, Mail, PenTool
 } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
 import { useAuthStore } from '@/store/authStore';
@@ -15,6 +16,7 @@ import {
   registeredSocieties, 
   communityPackages, 
   defaultActiveCommunityBooking, 
+  communityWorkerTypeOptions,
   Society, 
   CommunityPackage, 
   CommunityBooking 
@@ -244,6 +246,8 @@ export default function CustomerDashboard() {
   const [serviceMode, setServiceMode] = useState<'INDIVIDUAL' | 'COMMUNITY'>('INDIVIDUAL');
   const [selectedSociety, setSelectedSociety] = useState<Society>(registeredSocieties[0]);
   const [activeCommunityBooking, setActiveCommunityBooking] = useState<CommunityBooking>(defaultActiveCommunityBooking);
+  const [selectedWorkerTypeFilter, setSelectedWorkerTypeFilter] = useState<string>('ALL');
+  const [showCommunityDetails, setShowCommunityDetails] = useState<boolean>(false);
   const [copiedOtp, setCopiedOtp] = useState(false);
   const [bookingModalPkg, setBookingModalPkg] = useState<CommunityPackage | null>(null);
   const [bookingTowers, setBookingTowers] = useState('Towers A, B & Common Sump');
@@ -377,6 +381,16 @@ export default function CustomerDashboard() {
           'community society squad tank cleaning'.includes(query)
       )
     : [];
+
+  const filteredCommunityPackages = communityPackages.filter((pkg) => {
+    if (selectedWorkerTypeFilter === 'ALL') return true;
+    if (selectedWorkerTypeFilter === 'Water Tank & Plumbing' && pkg.tradeCategory === 'Plumbing') return true;
+    if (selectedWorkerTypeFilter === 'Cleaning & Jetting' && pkg.tradeCategory === 'Cleaning') return true;
+    if (selectedWorkerTypeFilter === 'Electrical & Substation' && pkg.tradeCategory === 'Electrician') return true;
+    if (selectedWorkerTypeFilter === 'Society AMC' && pkg.tradeCategory === 'Society AMC') return true;
+    return pkg.tradeCategory.toLowerCase().includes(selectedWorkerTypeFilter.toLowerCase()) ||
+           pkg.title.toLowerCase().includes(selectedWorkerTypeFilter.toLowerCase());
+  });
 
   const displayName = fullName || clientName || (phone ? `Member ${phone.slice(-4)}` : 'Friend');
 
@@ -515,55 +529,55 @@ export default function CustomerDashboard() {
           </div>
 
           {/* Service Mode Selector: Individual vs Community Society Services */}
-          <div className="mt-4 p-1 bg-black/25 backdrop-blur-md rounded-2xl flex border border-white/20 max-w-md">
+          <div className="mt-4 p-1 bg-black/25 backdrop-blur-md rounded-2xl flex flex-col sm:flex-row border border-white/20 w-full sm:max-w-md gap-1">
             <button
               type="button"
               onClick={() => setServiceMode('INDIVIDUAL')}
-              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+              className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer min-w-0 ${
                 serviceMode === 'INDIVIDUAL'
                   ? 'bg-white text-teal-950 shadow-md'
                   : 'text-emerald-100 hover:text-white'
               }`}
             >
-              <User className="w-4 h-4 text-teal-700" />
-              <span>Individual Home Services</span>
+              <User className="w-4 h-4 text-teal-700 flex-shrink-0" />
+              <span className="truncate">Individual Home Services</span>
             </button>
             <button
               type="button"
               onClick={() => setServiceMode('COMMUNITY')}
-              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+              className={`flex-1 py-2 px-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer min-w-0 ${
                 serviceMode === 'COMMUNITY'
                   ? 'bg-amber-400 text-teal-950 shadow-md font-black'
                   : 'text-emerald-100 hover:text-white'
               }`}
             >
-              <Users className="w-4 h-4 text-teal-950" />
-              <span>Community & Society Squads</span>
+              <Users className="w-4 h-4 text-teal-950 flex-shrink-0" />
+              <span className="truncate">Community & Society Squads</span>
             </button>
           </div>
 
-          {/* Search Bar */}
-          <div className="mt-4 bg-white rounded-2xl p-2 flex items-center gap-2 shadow-xl border border-white/20">
+          {/* Search Bar with zero horizontal overflow */}
+          <div className="mt-4 bg-white rounded-2xl p-2 flex items-center gap-2 shadow-xl border border-white/20 w-full min-w-0">
             <Search className="w-5 h-5 text-slate-400 ml-2 flex-shrink-0" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by worker name (e.g. Jaymeen, Sunita), service, or society..."
-              className="w-full text-xs sm:text-sm font-medium text-slate-800 outline-none placeholder-slate-400"
+              placeholder="Search by worker name, service, or society..."
+              className="w-full min-w-0 flex-1 text-xs sm:text-sm font-medium text-slate-800 outline-none placeholder-slate-400 bg-transparent"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="text-xs text-slate-400 hover:text-slate-600 px-1 font-bold"
+                className="text-xs text-slate-400 hover:text-slate-600 px-1 font-bold flex-shrink-0"
               >
                 ✕
               </button>
             )}
             <Link
               href={searchQuery ? `/customer/services?search=${encodeURIComponent(searchQuery)}` : '/customer/services'}
-              className="bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition flex-shrink-0"
+              className="bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs px-3.5 sm:px-4 py-2.5 rounded-xl transition flex-shrink-0 whitespace-nowrap"
             >
               Find
             </Link>
@@ -714,45 +728,54 @@ export default function CustomerDashboard() {
         {/* Service Mode Dynamic Section */}
         {serviceMode === 'COMMUNITY' ? (
           <div className="space-y-5 animate-in fade-in">
-            {/* Housing Society Selector Bar */}
-            <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center flex-shrink-0 shadow-xs">
+            {/* Housing Society Selector Bar with full mobile responsiveness */}
+            <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 w-full min-w-0">
+              <div className="flex items-start sm:items-center gap-3 min-w-0">
+                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center flex-shrink-0 shadow-xs">
                   <Building2 className="w-6 h-6" />
                 </div>
-                <div>
-                  <div className="flex items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                     <span className="text-[10px] font-black uppercase bg-teal-800 text-amber-300 px-2 py-0.5 rounded-full">
                       Selected Housing Society
                     </span>
-                    <span className="text-xs text-slate-400 font-semibold">{selectedSociety.locality}, {selectedSociety.city}</span>
+                    <span className="text-xs text-slate-400 font-semibold truncate">{selectedSociety.locality}, {selectedSociety.city}</span>
                   </div>
-                  <h3 className="text-lg font-black text-slate-900 mt-0.5">{selectedSociety.name}</h3>
-                  <p className="text-xs text-slate-500">
-                    {selectedSociety.totalFlats} Flats • Society Secretary: <b>{selectedSociety.managerName}</b> ({selectedSociety.managerPhone})
+                  <h3 className="text-base sm:text-lg font-black text-slate-900 mt-0.5 break-words">{selectedSociety.name}</h3>
+                  <p className="text-xs text-slate-500 truncate">
+                    {selectedSociety.totalFlats} Flats • Rep: <b>{selectedSociety.authorizedRepresentative?.name || selectedSociety.managerName}</b>
                   </p>
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full md:w-auto">
                 <select
                   value={selectedSociety.id}
                   onChange={(e) => {
                     const found = registeredSocieties.find(s => s.id === e.target.value);
                     if (found) setSelectedSociety(found);
                   }}
-                  className="bg-slate-50 border-2 border-teal-600 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 outline-none cursor-pointer"
+                  className="bg-slate-50 border-2 border-teal-600 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 outline-none cursor-pointer w-full sm:w-auto min-w-0"
                 >
                   {registeredSocieties.map((s) => (
                     <option key={s.id} value={s.id}>
-                      Switch Society: {s.shortName}
+                      Switch: {s.shortName}
                     </option>
                   ))}
                 </select>
 
+                <button
+                  type="button"
+                  onClick={() => setShowCommunityDetails(!showCommunityDetails)}
+                  className="bg-amber-400 hover:bg-amber-300 text-teal-950 font-black text-xs px-3.5 py-2.5 rounded-xl transition flex items-center justify-center gap-1.5 shadow-xs cursor-pointer whitespace-nowrap"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>{showCommunityDetails ? 'Hide Record ▲' : 'Community Record ▼'}</span>
+                </button>
+
                 <Link
                   href="/customer/community"
-                  className="bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs px-3.5 py-2.5 rounded-xl transition flex items-center gap-1.5 whitespace-nowrap shadow-xs"
+                  className="bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs px-3.5 py-2.5 rounded-xl transition flex items-center justify-center gap-1.5 whitespace-nowrap shadow-xs"
                 >
                   <span>Full Society Hub</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -760,20 +783,189 @@ export default function CustomerDashboard() {
               </div>
             </div>
 
-            {/* Active Squad Live Status & Gate Arrival OTP Card */}
-            <div className="bg-gradient-to-br from-[#042f2e] via-[#0f766e] to-[#042f2e] text-white rounded-3xl p-5 sm:p-6 shadow-xl border border-teal-700/60 relative overflow-hidden">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="space-y-1.5">
+            {/* Expandable Official Community & Society Record Card */}
+            {showCommunityDetails && (
+              <div className="bg-white rounded-3xl p-5 sm:p-6 border-2 border-amber-300 shadow-md space-y-5 animate-in fade-in">
+                <div className="flex items-center justify-between border-b border-amber-200 pb-3">
                   <div className="flex items-center gap-2">
+                    <Building2 className="w-5 h-5 text-amber-600" />
+                    <div>
+                      <h4 className="font-black text-sm sm:text-base text-slate-900 leading-none">
+                        OFFICIAL COMMUNITY RECORD & VERIFICATION
+                      </h4>
+                      <span className="text-[10px] text-teal-800 font-bold">
+                        Verified Government & Society Registration Dossier
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] bg-emerald-100 text-emerald-800 font-black px-2.5 py-1 rounded-full flex items-center gap-1">
+                    <CheckCircle className="w-3 h-3" />
+                    <span>Verified Active</span>
+                  </span>
+                </div>
+
+                {/* 1. COMMUNITY DETAILS */}
+                <div className="space-y-2">
+                  <p className="text-[11px] font-black uppercase text-teal-900 tracking-wider flex items-center gap-1.5">
+                    <Building2 className="w-3.5 h-3.5 text-teal-700" />
+                    <span>COMMUNITY DETAILS</span>
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 bg-slate-50 p-3.5 rounded-2xl border border-slate-200 text-xs">
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Community Name</span>
+                      <span className="font-black text-slate-900">{selectedSociety.name}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Community Type</span>
+                      <span className="font-bold text-teal-800">{selectedSociety.communityType || 'Cooperative Housing Society'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Full Address</span>
+                      <span className="font-semibold text-slate-800">{selectedSociety.fullAddress || selectedSociety.locality}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block">City & District</span>
+                      <span className="font-semibold text-slate-800">{selectedSociety.city}, {selectedSociety.district || `${selectedSociety.city} Urban`}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block">State & PIN Code</span>
+                      <span className="font-semibold text-slate-800">{selectedSociety.state || 'Gujarat'} - {selectedSociety.pincode || '380001'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Total Residences</span>
+                      <span className="font-semibold text-slate-800">{selectedSociety.totalFlats} Flats / Units</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. AUTHORIZED REPRESENTATIVE */}
+                <div className="space-y-2 pt-2 border-t border-slate-100">
+                  <p className="text-[11px] font-black uppercase text-teal-900 tracking-wider flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-teal-700" />
+                    <span>AUTHORIZED REPRESENTATIVE</span>
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5 bg-slate-50 p-3.5 rounded-2xl border border-slate-200 text-xs">
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Representative Name</span>
+                      <span className="font-black text-slate-900">{selectedSociety.authorizedRepresentative?.name || selectedSociety.managerName}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Designation / Role</span>
+                      <span className="font-bold text-teal-800">{selectedSociety.authorizedRepresentative?.designation || 'Chairman'}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Mobile Number</span>
+                      <span className="font-semibold text-slate-800">{selectedSociety.authorizedRepresentative?.mobile || selectedSociety.managerPhone}</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Email Address</span>
+                      <span className="font-semibold text-slate-800">{selectedSociety.authorizedRepresentative?.email || 'office@sahyog.in'}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. COMMUNITY DECLARATION */}
+                <div className="space-y-2 pt-2 border-t border-slate-100">
+                  <p className="text-[11px] font-black uppercase text-amber-950 tracking-wider flex items-center gap-1.5">
+                    <PenTool className="w-3.5 h-3.5 text-amber-700" />
+                    <span>COMMUNITY DECLARATION</span>
+                  </p>
+                  <div className="bg-amber-50/70 p-3.5 rounded-2xl border border-amber-200 space-y-2 text-xs">
+                    <blockquote className="italic text-slate-800 border-l-2 border-amber-500 pl-2 leading-relaxed">
+                      &ldquo;{selectedSociety.declaration?.statement || 'I declare that I am authorized to represent the above-mentioned community and that the information provided is true and correct.'}&rdquo;
+                    </blockquote>
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-amber-200/60 text-[11px]">
+                      <div>
+                        <span className="text-slate-500">Signatory: </span>
+                        <span className="font-serif font-black text-teal-950">{selectedSociety.declaration?.signature || selectedSociety.managerName}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">Declared Date: </span>
+                        <span className="font-mono font-bold text-slate-700">{selectedSociety.declaration?.date || '2026-03-01'}</span>
+                      </div>
+                      <span className="bg-emerald-100 text-emerald-800 font-black px-2 py-0.5 rounded text-[10px]">
+                        ✓ Declaration Verified
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. SUPPORTING INFORMATION */}
+                <div className="space-y-2 pt-2 border-t border-slate-100">
+                  <p className="text-[11px] font-black uppercase text-teal-900 tracking-wider flex items-center gap-1.5">
+                    <FileText className="w-3.5 h-3.5 text-teal-700" />
+                    <span>SUPPORTING INFORMATION</span>
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3.5 rounded-2xl border border-slate-200 text-xs">
+                    <div className="space-y-1.5">
+                      <div>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase block">Registration Number</span>
+                        <span className="font-mono font-bold text-slate-900">{selectedSociety.supportingInfo?.registrationNumber || selectedSociety.societyRegNo}</span>
+                      </div>
+                      <div>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase block">Registration Authority</span>
+                        <span className="font-medium text-slate-700">{selectedSociety.supportingInfo?.registrationAuthority || 'Registrar of Housing Societies'}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-teal-800 font-bold pt-1">
+                        <Stamp className="w-4 h-4 text-amber-600" />
+                        <span>Official Community Seal: {selectedSociety.supportingInfo?.hasCommunitySeal ? 'Affixed & On Record' : 'N/A'}</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block mb-1">Attached Supporting Proof</span>
+                      <div className="space-y-1">
+                        {(selectedSociety.supportingInfo?.attachedProof || ['Registration Certificate', 'Society Document']).map((proof, i) => (
+                          <div key={i} className="flex items-center gap-1.5 text-[11px] text-slate-700 font-semibold bg-white p-1.5 rounded-lg border border-slate-200">
+                            <CheckSquare className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                            <span>{proof}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 5. WORKER TYPES IN COMMUNITY */}
+                <div className="space-y-2 pt-2 border-t border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[11px] font-black uppercase text-teal-900 tracking-wider flex items-center gap-1.5">
+                      <Wrench className="w-3.5 h-3.5 text-amber-600" />
+                      <span>WORKER TYPES IN THIS COMMUNITY</span>
+                    </p>
+                    <span className="text-[10px] text-teal-700 font-bold">
+                      {selectedSociety.availableWorkerTypes?.length || 4} Specialties Enrolled
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(selectedSociety.availableWorkerTypes || communityWorkerTypeOptions).map((wt, i) => (
+                      <span
+                        key={i}
+                        className="bg-amber-50 border border-amber-300 text-teal-950 text-[11px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1"
+                      >
+                        <Check className="w-3 h-3 text-amber-600" />
+                        <span>{wt}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Active Squad Live Status & Gate Arrival OTP Card */}
+            <div className="bg-gradient-to-br from-[#042f2e] via-[#0f766e] to-[#042f2e] text-white rounded-3xl p-5 sm:p-6 shadow-xl border border-teal-700/60 relative overflow-hidden w-full min-w-0">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1.5 min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="bg-emerald-400 text-teal-950 font-black text-[10px] px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
                       <span className="w-2 h-2 rounded-full bg-teal-950 animate-ping" />
                       Squad Active on-site
                     </span>
-                    <span className="text-teal-200 text-xs font-semibold">
+                    <span className="text-teal-200 text-xs font-semibold truncate">
                       {selectedSociety.name}
                     </span>
                   </div>
-                  <h4 className="text-xl font-black text-white">
+                  <h4 className="text-lg sm:text-xl font-black text-white break-words">
                     {activeCommunityBooking.packageTitle}
                   </h4>
                   <p className="text-xs text-teal-100">
@@ -781,8 +973,8 @@ export default function CustomerDashboard() {
                   </p>
                 </div>
 
-                {/* Gate Arrival OTP Pill Box */}
-                <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3.5 border border-white/20 text-center sm:min-w-[190px]">
+                {/* Gate Arrival OTP Pill Box with no mobile overflow */}
+                <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3.5 border border-white/20 text-center w-full sm:w-auto sm:min-w-[190px]">
                   <p className="text-[10px] font-black uppercase text-amber-300 tracking-wider flex items-center justify-center gap-1">
                     <KeyRound className="w-3.5 h-3.5" /> Society Gate Arrival OTP
                   </p>
@@ -832,6 +1024,52 @@ export default function CustomerDashboard() {
               </div>
             </div>
 
+            {/* Filter by Worker Types in Community so user can select as their own */}
+            <div className="bg-white rounded-3xl p-4 sm:p-5 border border-slate-200 shadow-xs space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                <div>
+                  <h4 className="font-black text-sm sm:text-base text-slate-900 flex items-center gap-2">
+                    <Wrench className="w-4 h-4 text-teal-700" />
+                    <span>Worker Types in Community</span>
+                  </h4>
+                  <p className="text-xs text-slate-500">
+                    Select a worker trade to deploy dedicated squads:
+                  </p>
+                </div>
+                <span className="text-xs text-teal-700 font-bold">
+                  Showing {filteredCommunityPackages.length} Packages
+                </span>
+              </div>
+
+              {/* Interactive Worker Type Filter Pills */}
+              <div className="flex flex-wrap gap-2 pt-1">
+                {[
+                  { id: 'ALL', label: 'All Community Squads' },
+                  { id: 'Water Tank & Plumbing', label: '💧 Water Tank & Plumbing' },
+                  { id: 'Electrical & Substation', label: '⚡ Electrical & Substation' },
+                  { id: 'Cleaning & Jetting', label: '🧹 Deep Cleaning & Jetting' },
+                  { id: 'Society AMC', label: '🏢 Society Infrastructure AMC' }
+                ].map((filter) => {
+                  const active = selectedWorkerTypeFilter === filter.id;
+                  return (
+                    <button
+                      key={filter.id}
+                      type="button"
+                      onClick={() => setSelectedWorkerTypeFilter(filter.id)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                        active
+                          ? 'bg-teal-700 text-white shadow-xs'
+                          : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      }`}
+                    >
+                      {active && <Check className="w-3 h-3" />}
+                      <span>{filter.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* Society Squad Packages Grid */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
@@ -847,7 +1085,7 @@ export default function CustomerDashboard() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {communityPackages.map((pkg) => (
+                {filteredCommunityPackages.map((pkg) => (
                   <div
                     key={pkg.id}
                     className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs hover:border-teal-500 transition flex flex-col justify-between"

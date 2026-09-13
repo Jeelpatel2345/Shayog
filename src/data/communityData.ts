@@ -1,10 +1,48 @@
+export interface AuthorizedRepresentative {
+  name: string;
+  designation: string; // e.g. 'Chairman', 'Secretary', 'Estate Manager'
+  mobile: string;
+  email: string;
+}
+
+export interface CommunityDeclaration {
+  statement: string;
+  signature: string;
+  date: string;
+  isAccepted: boolean;
+}
+
+export interface SupportingInformation {
+  registrationNumber?: string;
+  registrationAuthority?: string;
+  attachedProof: (
+    | 'Registration Certificate'
+    | 'Society/Association Document'
+    | 'Cooperative Certificate'
+    | 'Local Authority Document'
+    | 'Other Official Document'
+    | 'Not Applicable'
+  )[];
+  representativeSignature: string;
+  hasCommunitySeal: boolean;
+}
+
 export interface Society {
   id: string;
   name: string;
   shortName: string;
-  locality: string;
+  communityType: string; // e.g. 'Cooperative Housing Society', 'Gated Residential Society', etc.
+  fullAddress: string;
   city: string;
+  district: string;
+  state: string;
+  pincode: string;
+  locality: string;
   totalFlats: number;
+  authorizedRepresentative: AuthorizedRepresentative;
+  declaration: CommunityDeclaration;
+  supportingInfo: SupportingInformation;
+  availableWorkerTypes: string[];
   managerName: string;
   managerPhone: string;
   securityGate: string;
@@ -58,14 +96,54 @@ export interface CommunityBooking {
   createdAt: string;
 }
 
+export const communityWorkerTypeOptions = [
+  'Water Tank & Plumbing Technicians',
+  'Substation & High-Voltage Electricians',
+  'Common Area Deep Jetting & Sanitization',
+  'Society Gate & Security Marshals',
+  'Gardeners & Campus Landscaping',
+  'Lift, Elevator & DG Set Operators',
+  'Civil Masonry & Waterproofing Crews'
+] as const;
+
 export const registeredSocieties: Society[] = [
   {
     id: 'soc-101',
     name: 'Shanti Heights Resident Society',
     shortName: 'Shanti Heights',
-    locality: 'Sector 12, Navrangpura',
+    communityType: 'Cooperative Housing Society',
+    fullAddress: 'Plot 42, Sector 12, Near Commerce Six Roads, Navrangpura',
     city: 'Ahmedabad',
+    district: 'Ahmedabad Urban',
+    state: 'Gujarat',
+    pincode: '380009',
+    locality: 'Sector 12, Navrangpura',
     totalFlats: 120,
+    authorizedRepresentative: {
+      name: 'Kiritbhai Shah',
+      designation: 'Chairman',
+      mobile: '+91 98250 11223',
+      email: 'chairman@shantiheights.org'
+    },
+    declaration: {
+      statement: 'I declare that I am authorized to represent the above-mentioned community and that the information provided is true and correct.',
+      signature: 'Kiritbhai R. Shah',
+      date: '2026-03-10',
+      isAccepted: true
+    },
+    supportingInfo: {
+      registrationNumber: 'GUJ/AHM/2018/4891',
+      registrationAuthority: 'District Registrar of Co-operative Societies, Ahmedabad',
+      attachedProof: ['Registration Certificate', 'Society/Association Document', 'Cooperative Certificate'],
+      representativeSignature: 'Kiritbhai R. Shah',
+      hasCommunitySeal: true
+    },
+    availableWorkerTypes: [
+      'Water Tank & Plumbing Technicians',
+      'Substation & High-Voltage Electricians',
+      'Common Area Deep Jetting & Sanitization',
+      'Lift, Elevator & DG Set Operators'
+    ],
     managerName: 'Kiritbhai Shah (Chairman)',
     managerPhone: '+91 98250 11223',
     securityGate: 'Main Gate 1 & 2 Security Cabin',
@@ -75,9 +153,39 @@ export const registeredSocieties: Society[] = [
     id: 'soc-102',
     name: 'Gokuldham Co-op Housing Society',
     shortName: 'Gokuldham Society',
-    locality: 'Near Vastrapur Lake, Vastrapur',
+    communityType: 'Cooperative Housing Society',
+    fullAddress: 'Survey No. 89, Opp. Vastrapur Lake Garden, Vastrapur',
     city: 'Ahmedabad',
+    district: 'Ahmedabad Urban',
+    state: 'Gujarat',
+    pincode: '380015',
+    locality: 'Near Vastrapur Lake, Vastrapur',
     totalFlats: 85,
+    authorizedRepresentative: {
+      name: 'Pravin Solanki',
+      designation: 'Secretary',
+      mobile: '+91 98980 44556',
+      email: 'secretary@gokuldham-ahmedabad.com'
+    },
+    declaration: {
+      statement: 'I declare that I am authorized to represent the above-mentioned community and that the information provided is true and correct.',
+      signature: 'Pravin M. Solanki',
+      date: '2026-02-14',
+      isAccepted: true
+    },
+    supportingInfo: {
+      registrationNumber: 'GUJ/AHM/2015/3104',
+      registrationAuthority: 'Registrar of Housing Societies, Zone-3',
+      attachedProof: ['Registration Certificate', 'Cooperative Certificate'],
+      representativeSignature: 'Pravin M. Solanki',
+      hasCommunitySeal: true
+    },
+    availableWorkerTypes: [
+      'Water Tank & Plumbing Technicians',
+      'Common Area Deep Jetting & Sanitization',
+      'Gardeners & Campus Landscaping',
+      'Society Gate & Security Marshals'
+    ],
     managerName: 'Pravin Solanki (Secretary)',
     managerPhone: '+91 98980 44556',
     securityGate: 'North Gate Tower Reception',
@@ -87,9 +195,40 @@ export const registeredSocieties: Society[] = [
     id: 'soc-103',
     name: 'Surat Diamond Enclave',
     shortName: 'Diamond Enclave',
-    locality: 'Mini Bazar, Varachha',
+    communityType: 'Gated Residential Society',
+    fullAddress: 'Diamond Park Road, Mini Bazar, Varachha',
     city: 'Surat',
+    district: 'Surat Municipal Corp.',
+    state: 'Gujarat',
+    pincode: '395006',
+    locality: 'Mini Bazar, Varachha',
     totalFlats: 240,
+    authorizedRepresentative: {
+      name: 'Hareshbhai Patel',
+      designation: 'Estate Manager',
+      mobile: '+91 97270 99887',
+      email: 'manager@diamondenclave.in'
+    },
+    declaration: {
+      statement: 'I declare that I am authorized to represent the above-mentioned community and that the information provided is true and correct.',
+      signature: 'Haresh K. Patel',
+      date: '2026-01-20',
+      isAccepted: true
+    },
+    supportingInfo: {
+      registrationNumber: 'GUJ/SUR/2020/7812',
+      registrationAuthority: 'Surat Municipal Corporation Registrar',
+      attachedProof: ['Registration Certificate', 'Society/Association Document', 'Local Authority Document'],
+      representativeSignature: 'Haresh K. Patel',
+      hasCommunitySeal: true
+    },
+    availableWorkerTypes: [
+      'Water Tank & Plumbing Technicians',
+      'Substation & High-Voltage Electricians',
+      'Common Area Deep Jetting & Sanitization',
+      'Civil Masonry & Waterproofing Crews',
+      'Lift, Elevator & DG Set Operators'
+    ],
     managerName: 'Hareshbhai Patel (Manager)',
     managerPhone: '+91 97270 99887',
     securityGate: 'Commercial & Residential Boom Barrier',
@@ -99,15 +238,46 @@ export const registeredSocieties: Society[] = [
     id: 'soc-104',
     name: 'Sayaji Green Towers & Villas',
     shortName: 'Sayaji Green',
-    locality: 'Old Padra Road, Akota',
+    communityType: 'Apartment Owners Association (AOA)',
+    fullAddress: 'Block C-7, Old Padra Road, Akota',
     city: 'Vadodara',
+    district: 'Vadodara City',
+    state: 'Gujarat',
+    pincode: '390020',
+    locality: 'Old Padra Road, Akota',
     totalFlats: 160,
+    authorizedRepresentative: {
+      name: 'Dipak Desai',
+      designation: 'Society Admin & Treasurer',
+      mobile: '+91 94260 33221',
+      email: 'admin@sayajigreen.org'
+    },
+    declaration: {
+      statement: 'I declare that I am authorized to represent the above-mentioned community and that the information provided is true and correct.',
+      signature: 'Dipak S. Desai',
+      date: '2026-02-28',
+      isAccepted: true
+    },
+    supportingInfo: {
+      registrationNumber: 'GUJ/BRD/2019/6231',
+      registrationAuthority: 'Vadodara Urban Development Authority (VUDA)',
+      attachedProof: ['Registration Certificate', 'Society/Association Document'],
+      representativeSignature: 'Dipak S. Desai',
+      hasCommunitySeal: true
+    },
+    availableWorkerTypes: [
+      'Water Tank & Plumbing Technicians',
+      'Substation & High-Voltage Electricians',
+      'Common Area Deep Jetting & Sanitization',
+      'Gardeners & Campus Landscaping'
+    ],
     managerName: 'Dipak Desai (Society Admin)',
     managerPhone: '+91 94260 33221',
     securityGate: 'Clubhouse Entrance & Visitors Desk',
     societyRegNo: 'GUJ/BRD/2019/6231'
   }
 ];
+
 
 export const communityPackages: CommunityPackage[] = [
   {
