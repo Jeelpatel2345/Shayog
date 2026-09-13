@@ -128,7 +128,7 @@ export default function CustomerDashboard() {
   const initials = getInitials(displayName);
 
   return (
-    <div className="w-full min-h-screen bg-slate-50 pb-20 text-slate-900">
+    <div className="w-full min-h-screen bg-slate-50 pb-32 sm:pb-28 text-slate-900">
       {/* Desktop Top Navbar */}
       <header className="hidden md:block bg-[#042f2e] border-b border-emerald-900/50 sticky top-0 z-30 shadow-md">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
@@ -499,27 +499,27 @@ export default function CustomerDashboard() {
 
       {/* Worker Feedback & Rating Popup Modal */}
       {isFeedbackOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200 flex flex-col max-h-[92vh]">
+        <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200 flex flex-col max-h-[84vh] sm:max-h-[88vh] my-auto">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-[#042f2e] via-[#0d9488] to-[#042f2e] text-white p-5 sm:p-6 relative flex-shrink-0">
+            <div className="bg-gradient-to-r from-[#042f2e] via-[#0d9488] to-[#042f2e] text-white p-4 sm:p-5 relative flex-shrink-0">
               <button
                 type="button"
                 onClick={() => setIsFeedbackOpen(false)}
-                className="absolute top-4 right-4 text-emerald-200 hover:text-white p-1 rounded-full bg-white/10 hover:bg-white/20 transition cursor-pointer"
+                className="absolute top-3.5 right-3.5 sm:top-4 sm:right-4 text-emerald-200 hover:text-white p-1.5 rounded-full bg-white/10 hover:bg-white/20 transition cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
 
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-amber-400 text-emerald-950 font-black text-lg flex items-center justify-center shadow-md">
+                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-amber-400 text-emerald-950 font-black text-lg flex items-center justify-center shadow-md">
                   AK
                 </div>
                 <div>
                   <span className="text-[10px] font-black uppercase tracking-wider bg-amber-400/20 text-amber-300 border border-amber-400/40 px-2 py-0.5 rounded-full">
                     Rate Service Partner
                   </span>
-                  <h3 className="font-black text-lg sm:text-xl text-white mt-1 leading-tight">
+                  <h3 className="font-black text-base sm:text-lg text-white mt-1 leading-tight">
                     {ratedWorker.name}
                   </h3>
                   <p className="text-xs text-emerald-100/90">{ratedWorker.service}</p>
@@ -527,8 +527,8 @@ export default function CustomerDashboard() {
               </div>
             </div>
 
-            {/* Modal Body */}
-            <div className="p-5 sm:p-6 overflow-y-auto space-y-5">
+            {/* Modal Body with smooth scrolling */}
+            <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1 overscroll-contain">
               {feedbackSubmitted ? (
                 <div className="py-8 text-center space-y-3 animate-in zoom-in-95">
                   <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-inner">
@@ -654,11 +654,11 @@ export default function CustomerDashboard() {
                     </div>
                   </div>
 
-                  {/* Submit Button */}
-                  <div className="pt-2">
+                  {/* Submit Button with generous bottom padding and high visibility */}
+                  <div className="pt-2 pb-6">
                     <button
                       type="submit"
-                      className="w-full bg-teal-700 hover:bg-teal-800 text-white font-black py-3.5 rounded-2xl shadow-lg shadow-teal-900/20 transition text-sm flex items-center justify-center gap-2 cursor-pointer"
+                      className="w-full bg-teal-700 hover:bg-teal-800 active:scale-[0.98] text-white font-black py-4 rounded-2xl shadow-lg shadow-teal-900/25 transition text-sm flex items-center justify-center gap-2 cursor-pointer border border-teal-600/30"
                     >
                       <Star className="w-4 h-4 fill-white" />
                       <span>Submit Worker Rating & Review</span>

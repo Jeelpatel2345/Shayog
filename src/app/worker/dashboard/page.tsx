@@ -287,7 +287,7 @@ export default function WorkerDashboard() {
         </header>
 
         {/* Content Body */}
-        <main className="flex-1 p-4 sm:p-5 space-y-4">
+        <main className="flex-1 p-4 sm:p-5 space-y-4 pb-16 sm:pb-8">
           
           {/* Status Toggle Card (Online / Offline) */}
           <div 
@@ -679,8 +679,8 @@ export default function WorkerDashboard() {
 
       {/* Real Directions & Map Modal */}
       {showDirectionsModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in">
-          <div className="w-full max-w-lg bg-white rounded-3xl overflow-hidden shadow-2xl border border-slate-200 flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 z-[100] bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 animate-in fade-in overflow-y-auto">
+          <div className="w-full max-w-lg bg-white rounded-3xl overflow-hidden shadow-2xl border border-slate-200 flex flex-col max-h-[85vh] my-auto">
             <div className="bg-teal-800 text-white p-4 flex items-center justify-between">
               <div>
                 <h3 className="font-bold text-base flex items-center gap-2">
@@ -758,8 +758,8 @@ export default function WorkerDashboard() {
 
       {/* Aadhaar Upload Verification Modal */}
       {showUploadModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <div className="w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl border border-slate-200 p-5 space-y-4">
+        <div className="fixed inset-0 z-[100] bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in overflow-y-auto">
+          <div className="w-full max-w-md bg-white rounded-3xl overflow-hidden shadow-2xl border border-slate-200 p-5 space-y-4 max-h-[85vh] overflow-y-auto my-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-teal-600" />
@@ -832,8 +832,8 @@ export default function WorkerDashboard() {
 
       {/* Contact Customer Modal */}
       {showContactModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <div className="w-full max-w-sm bg-white rounded-3xl overflow-hidden shadow-2xl border border-slate-200 p-5 space-y-4">
+        <div className="fixed inset-0 z-[100] bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in overflow-y-auto">
+          <div className="w-full max-w-sm bg-white rounded-3xl overflow-hidden shadow-2xl border border-slate-200 p-5 space-y-4 max-h-[85vh] overflow-y-auto my-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-bold text-base text-slate-900">Contact Customer</h3>
               <button 
@@ -878,7 +878,7 @@ export default function WorkerDashboard() {
 
       {/* Toast Notification */}
       {toastNotice && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-emerald-700 text-white font-bold text-xs px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-4">
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[100] bg-emerald-700 text-white font-bold text-xs px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-4">
           <CheckCircle2 className="w-4 h-4 text-emerald-300" />
           <span>{toastNotice}</span>
         </div>
@@ -886,8 +886,8 @@ export default function WorkerDashboard() {
 
       {/* Enter Customer 4-Digit OTP Modal */}
       {otpModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-slate-100 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-[100] bg-slate-950/75 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-slate-100 space-y-4 animate-in fade-in zoom-in-95 duration-200 max-h-[85vh] overflow-y-auto my-auto">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <KeyRound className="w-5 h-5 text-amber-500" />

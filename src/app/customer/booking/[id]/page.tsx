@@ -306,26 +306,24 @@ function BookingContent({ params }: { params: { id: string } }) {
       </div>
 
       {/* Sticky Bottom Confirmation Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 p-4 z-40 shadow-xl">
-        <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
+      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200 p-3.5 sm:p-4 z-40 shadow-2xl">
+        <div className="max-w-4xl mx-auto flex items-center justify-between gap-3 sm:gap-4">
           <div>
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
               Total Amount
             </span>
-            <span className="text-2xl font-black text-teal-800">₹ {totalPayable}</span>
+            <span className="text-xl sm:text-2xl font-black text-teal-800">₹ {totalPayable}</span>
           </div>
 
           <Link
             href={`/customer/payment/${worker.id}?amount=${totalPayable}&hours=${durationHours}`}
-            className="bg-teal-700 hover:bg-teal-800 text-white px-8 sm:px-12 py-3.5 rounded-2xl font-bold text-sm sm:text-base flex items-center gap-2 shadow-lg shadow-teal-900/20 transition"
+            className="bg-teal-700 hover:bg-teal-800 active:scale-[0.98] text-white px-6 sm:px-12 py-3.5 rounded-2xl font-bold text-xs sm:text-base flex items-center gap-1.5 sm:gap-2 shadow-lg shadow-teal-900/20 transition cursor-pointer"
           >
             <span>Proceed to UPI Payment</span>
             <ChevronRight className="w-4 h-4" />
           </Link>
         </div>
       </div>
-
-      <BottomNav role="customer" />
     </div>
   );
 }

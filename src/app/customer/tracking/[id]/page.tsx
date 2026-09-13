@@ -25,7 +25,7 @@ export default function JobTrackingPage() {
   };
 
   return (
-    <div className="max-w-md mx-auto min-h-screen bg-slate-50 pb-24 text-slate-900">
+    <div className="max-w-md mx-auto min-h-screen bg-slate-50 pb-32 text-slate-900">
       {/* Header */}
       <div className="p-4 flex items-center gap-3 border-b sticky top-0 bg-white z-20 shadow-xs">
         <Link href="/customer/bookings" className="p-1.5 rounded-lg hover:bg-slate-100 transition">
@@ -180,7 +180,7 @@ export default function JobTrackingPage() {
 
       {/* Cancel Confirmation Modal */}
       {showCancelModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-[100] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-5 max-w-xs w-full shadow-2xl animate-fade-in">
             <div className="flex items-center gap-2 text-red-600 font-bold pb-2 border-b">
               <AlertTriangle className="w-5 h-5" />

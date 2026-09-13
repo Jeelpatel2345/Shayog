@@ -112,11 +112,11 @@ export default function WorkerChatDrawer({
       {/* Backdrop overlay */}
       <div 
         onClick={onClose}
-        className="fixed inset-0 bg-black/40 backdrop-blur-xs z-50 transition-opacity"
+        className="fixed inset-0 bg-black/50 backdrop-blur-xs z-[100] transition-opacity"
       />
 
       {/* Side drawer: slides out smoothly from right edge */}
-      <div className="fixed top-0 right-0 bottom-0 w-full sm:w-[420px] bg-white z-50 shadow-2xl flex flex-col border-l border-slate-200 animate-in slide-in-from-right duration-300">
+      <div className="fixed top-0 right-0 bottom-0 w-full sm:w-[420px] bg-white z-[100] shadow-2xl flex flex-col border-l border-slate-200 animate-in slide-in-from-right duration-300">
         {/* Header */}
         <div className="bg-[#042f2e] text-white p-4 flex items-center justify-between border-b border-emerald-900 shadow-sm">
           <div className="flex items-center gap-3">
@@ -247,7 +247,7 @@ export default function WorkerChatDrawer({
         </div>
 
         {/* Bottom Input */}
-        <div className="p-3 bg-white border-t border-slate-200">
+        <div className="p-3 pb-6 sm:pb-3 bg-white border-t border-slate-200">
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -285,7 +285,7 @@ export default function WorkerChatDrawer({
 
       {/* Simulated Call Modal */}
       {callingModal && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-[100] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-6 text-center max-w-xs w-full shadow-2xl animate-fade-in">
             <div className="w-14 h-14 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-3">
               {callingModal === 'Voice' ? <Phone className="w-7 h-7 text-teal-700 animate-pulse" /> : <Video className="w-7 h-7 text-teal-700 animate-pulse" />}

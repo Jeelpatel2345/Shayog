@@ -38,7 +38,7 @@ export default function BottomNav({ role = 'customer' }: BottomNavProps) {
   const isProfile = pathname.startsWith('/profile') || (effectiveRole === 'admin' && pathname === '/admin/users');
 
   return (
-    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 max-w-md mx-auto z-50 shadow-lg">
+    <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-slate-200/80 max-w-md mx-auto z-30 shadow-lg">
       <div className="flex justify-around items-center py-2 px-3">
         {/* Home */}
         <Link href={homeHref} className="flex flex-col items-center justify-center flex-1 py-1 relative group">

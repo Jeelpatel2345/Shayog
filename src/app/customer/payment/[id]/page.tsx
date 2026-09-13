@@ -109,7 +109,7 @@ function PaymentContent({ params }: { params: { id: string } }) {
   const gstAmount = amount - (baseServiceFee + platformSafety);
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-28 text-slate-900">
+    <div className="min-h-screen bg-slate-50 pb-36 sm:pb-32 text-slate-900">
       {/* Top Header */}
       <div className="bg-[#042f2e] text-white border-b border-emerald-900/60 sticky top-0 z-30 shadow-md">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
@@ -120,22 +120,17 @@ function PaymentContent({ params }: { params: { id: string } }) {
             >
               <ArrowLeft className="w-5 h-5" />
             </Link>
-            <div>
-              <h1 className="font-bold text-base sm:text-lg text-white leading-tight">Payment & Confirmation</h1>
-              <p className="text-[11px] text-emerald-300 font-medium flex items-center gap-1">
-                <Lock className="w-3 h-3 text-emerald-400" /> 256-bit Encrypted Escrow
-              </p>
-            </div>
+            <h1 className="font-bold text-base sm:text-lg text-white">Select UPI Payment Method</h1>
           </div>
-          <span className="text-xs bg-amber-400 text-emerald-950 font-bold px-2.5 py-1 rounded-full">
-            Final Step
+          <span className="text-xs font-bold text-amber-300 bg-emerald-950/60 border border-emerald-700/50 px-3 py-1 rounded-full">
+            256-Bit SSL Encrypted
           </span>
         </div>
       </div>
 
       {/* Success Overlay */}
       {paymentSuccess && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fade-in">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-[100] flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-white rounded-3xl p-6 text-center max-w-sm w-full shadow-2xl space-y-3">
             <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-inner animate-bounce">
               <CheckCircle2 className="w-10 h-10" />
@@ -154,7 +149,7 @@ function PaymentContent({ params }: { params: { id: string } }) {
 
       {/* Processing Overlay */}
       {isProcessing && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fade-in">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[100] flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-white rounded-3xl p-6 text-center max-w-sm w-full shadow-2xl space-y-3">
             <div className="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
               <Loader2 className="w-8 h-8 animate-spin" />

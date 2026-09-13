@@ -91,7 +91,7 @@ export default function BookingsListPage() {
   });
 
   return (
-    <div className="max-w-md mx-auto min-h-screen bg-gray-50 pb-24">
+    <div className="max-w-md mx-auto min-h-screen bg-gray-50 pb-32">
       {/* Top App Bar */}
       <div className="bg-white p-4 flex items-center justify-between border-b sticky top-0 z-20">
         <div className="flex items-center gap-3">
@@ -261,7 +261,7 @@ export default function BookingsListPage() {
 
       {/* Cancel Booking Confirmation Modal */}
       {cancellingBooking && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-xs z-[100] flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl p-5 max-w-sm w-full shadow-2xl animate-fade-in">
             <div className="flex items-center justify-between pb-3 border-b">
               <div className="flex items-center gap-2 text-red-600 font-bold">
