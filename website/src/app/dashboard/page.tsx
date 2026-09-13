@@ -64,6 +64,29 @@ export default function CustomerDashboardPage() {
   const initials = getInitials(displayName);
   const featured = allWorkers.slice(0, 3);
 
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (e) {}
+    logout();
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('sahyog-logged-in');
+      localStorage.removeItem('sahyog-role');
+      localStorage.removeItem('sahyog-user-name');
+      localStorage.removeItem('sahyog-user-phone');
+      localStorage.removeItem('sahyog-user-email');
+      localStorage.removeItem('sahyog-user-city');
+      localStorage.removeItem('sahyog-user-address');
+      localStorage.removeItem('sahyog_worker_mode');
+      localStorage.removeItem('sahyog_active_job_status');
+      localStorage.removeItem('sahyog-service-scope');
+      localStorage.removeItem('sahyog-user-bookings');
+      localStorage.removeItem('sahyog_squad_name');
+      localStorage.removeItem('sahyog_society_name');
+      window.location.href = '/login';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 py-10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
@@ -107,6 +130,15 @@ export default function CustomerDashboardPage() {
             >
               Edit Profile
             </Link>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="bg-rose-600/80 hover:bg-rose-600 text-white font-bold text-xs px-4 py-3 rounded-xl border border-rose-500/50 transition flex items-center gap-1.5 cursor-pointer"
+              title="Log Out to Login Page"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Log Out</span>
+            </button>
           </div>
         </div>
 

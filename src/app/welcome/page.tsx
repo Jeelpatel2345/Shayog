@@ -16,14 +16,14 @@ export default function WelcomePage() {
     if (typeof window !== 'undefined') {
       const isLoggedIn = localStorage.getItem('sahyog-logged-in') === 'true';
       const role = localStorage.getItem('sahyog-role');
-      if (isLoggedIn) {
+      if (isLoggedIn && role) {
         if (role === 'WORKER') {
           router.replace('/worker/dashboard');
           return;
         } else if (role === 'ADMIN') {
           router.replace('/admin/overview');
           return;
-        } else {
+        } else if (role === 'CUSTOMER') {
           router.replace('/customer/dashboard');
           return;
         }

@@ -4,9 +4,11 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
   Globe, ChevronRight, Shield, Lock, CheckCircle, Smartphone, 
-  Loader2, ArrowRight, Sparkles, MessageSquare, AlertCircle, RefreshCw, User, Briefcase
+  Loader2, ArrowRight, Sparkles, MessageSquare, AlertCircle, RefreshCw, User, Briefcase,
+  Users, Building2, Wrench, HardHat, Check
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
+import { registeredSocieties } from '@/data/communityData';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -14,6 +16,20 @@ export default function LoginPage() {
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [selectedRole, setSelectedRole] = useState<'CUSTOMER' | 'WORKER'>('CUSTOMER');
+  
+  // Community Squad Options
+  const [workerType, setWorkerType] = useState<'INDIVIDUAL' | 'COMMUNITY'>('INDIVIDUAL');
+  const [societyName, setSocietyName] = useState('Shanti Heights Resident Society');
+  const [customSociety, setCustomSociety] = useState('');
+  const [squadName, setSquadName] = useState('');
+  const [crewSize, setCrewSize] = useState('4 Workers Squad');
+  const [serviceSpecialty, setServiceSpecialty] = useState('Overhead & Underground Water Tank Disinfection');
+  const [equipmentGear, setEquipmentGear] = useState<string[]>([
+    'High-Pressure Jet Washer',
+    'UV Disinfection Lamp',
+    'Safety Harnesses & Helmets'
+  ]);
+
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState(['', '', '', '']);
   const [loading, setLoading] = useState(false);
@@ -157,7 +173,7 @@ export default function LoginPage() {
 
       // Ensure if user selected WORKER tab, role is strictly WORKER
       const assignedRole = selectedRole === 'WORKER' ? 'WORKER' : (data.user.role || roleToSubmit);
-      const userFullName = fullName.trim() || data.user.fullName || (assignedRole === 'WORKER' ? 'Sunita Mehra' : `User ${phone.slice(-4)}`);
+      const userFullName = fullName.trim() || data.user.fullName || (assignedRole === 'WORKER' ? 'Jaymeen Patel' : `User ${phone.slice(-4)}`);
       
       setAuth({
         userId: data.user.id,
@@ -172,10 +188,43 @@ export default function LoginPage() {
       localStorage.setItem('sahyog-role', assignedRole);
       localStorage.setItem('sahyog-logged-in', 'true');
 
+      // Auto-register worker in DB & local store so search finds them immediately!
+      if (assignedRole === 'WORKER') {
+        const finalSociety = customSociety.trim() || societyName;
+        const finalSquad = squadName.trim() || `${userFullName} Squad`;
+
+        try {
+          await fetch('/api/workers', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              fullName: userFullName,
+              phone: data.user.phone,
+              city: workerType === 'COMMUNITY' ? finalSociety : 'Ahmedabad',
+              skills: workerType === 'COMMUNITY' ? [serviceSpecialty, 'Community Squad Lead'] : ['Home Specialist', 'Electrician', 'Plumber'],
+              hourlyRate: workerType === 'COMMUNITY' ? 450 : 350,
+              bio: workerType === 'COMMUNITY' 
+                ? `Squad Leader for ${finalSociety} (${crewSize}, Industrial Gear: ${equipmentGear.join(', ')})`
+                : 'Verified professional home service partner on SahYog.',
+            }),
+          });
+        } catch {}
+
+        if (workerType === 'COMMUNITY') {
+          localStorage.setItem('sahyog_worker_mode', 'COMMUNITY');
+          localStorage.setItem('sahyog_squad_name', finalSquad);
+          localStorage.setItem('sahyog_society_name', finalSociety);
+          router.push('/worker/community');
+          return;
+        } else {
+          localStorage.removeItem('sahyog_worker_mode');
+          router.push('/worker/dashboard');
+          return;
+        }
+      }
+
       if (assignedRole === 'ADMIN') {
         router.push('/admin/overview');
-      } else if (assignedRole === 'WORKER') {
-        router.push('/worker/dashboard');
       } else {
         router.push('/customer/dashboard');
       }
@@ -351,6 +400,36 @@ export default function LoginPage() {
               </div>
             )}
 
+            {/* Worker Service Mode: Individual vs Community Squad */}
+            {!otpSent && selectedRole === 'WORKER' && (
+              <div className="mt-3 p-1 bg-slate-100/90 rounded-2xl flex border border-slate-200 gap-1 animate-in fade-in">
+                <button
+                  type="button"
+                  onClick={() => setWorkerType('INDIVIDUAL')}
+                  className={`flex-1 py-2 px-2 rounded-xl text-[11px] font-bold transition flex items-center justify-center gap-1.5 ${
+                    workerType === 'INDIVIDUAL'
+                      ? 'bg-white text-teal-900 shadow-xs border border-slate-200'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <Wrench className="w-3.5 h-3.5 text-teal-600" />
+                  <span>Individual Partner</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setWorkerType('COMMUNITY')}
+                  className={`flex-1 py-2 px-2 rounded-xl text-[11px] font-bold transition flex items-center justify-center gap-1.5 ${
+                    workerType === 'COMMUNITY'
+                      ? 'bg-amber-400 text-teal-950 shadow-xs font-black'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                >
+                  <Users className="w-3.5 h-3.5 text-teal-950" />
+                  <span>Community Squad</span>
+                </button>
+              </div>
+            )}
+
             {errorMsg && (
               <div className="mt-3 p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 font-semibold flex items-center gap-2 animate-in fade-in">
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
@@ -358,13 +437,14 @@ export default function LoginPage() {
               </div>
             )}
 
-
             {!otpSent ? (
               <div className="mt-5 space-y-3.5">
                 {/* Full Name Input */}
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                    Your Full Name (आपका नाम / તમારું નામ)
+                    {selectedRole === 'WORKER' && workerType === 'COMMUNITY'
+                      ? 'Squad Leader / Supervisor Name (पर्यवेक्षक का नाम)'
+                      : 'Your Full Name (आपका नाम / તમારું નામ)'}
                   </label>
                   <div className="flex items-center border-2 border-slate-200 focus-within:border-teal-600 rounded-2xl p-2.5 transition bg-slate-50/50">
                     <User className="w-4 h-4 text-slate-400 ml-1 mr-2 flex-shrink-0" />
@@ -372,7 +452,7 @@ export default function LoginPage() {
                       type="text"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      placeholder="e.g. Jeel Patel"
+                      placeholder={selectedRole === 'WORKER' && workerType === 'COMMUNITY' ? 'e.g. Jaymeen Patel' : 'e.g. Jeel Patel'}
                       className="w-full bg-transparent outline-none text-sm font-semibold text-slate-900 placeholder-slate-400"
                     />
                   </div>
@@ -398,6 +478,137 @@ export default function LoginPage() {
                   </div>
                   <p className="text-[11px] text-slate-400 mt-1">Example: 9876543210</p>
                 </div>
+
+                {/* Community Specific Details */}
+                {selectedRole === 'WORKER' && workerType === 'COMMUNITY' && (
+                  <div className="p-3.5 bg-amber-50/60 rounded-2xl border border-amber-200/80 space-y-3 animate-in fade-in">
+                    <div className="flex items-center gap-1.5 text-amber-900 text-xs font-black">
+                      <Building2 className="w-4 h-4 text-amber-700" />
+                      <span>Community & Housing Society Information</span>
+                    </div>
+
+                    {/* Society Selector */}
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                        Housing Society / Apartment Complex
+                      </label>
+                      <select
+                        value={societyName}
+                        onChange={(e) => setSocietyName(e.target.value)}
+                        className="w-full border-2 border-amber-200 bg-white rounded-xl p-2 text-xs font-semibold text-slate-800 outline-none"
+                      >
+                        {registeredSocieties.map((s) => (
+                          <option key={s.id} value={s.name}>
+                            {s.name} ({s.locality})
+                          </option>
+                        ))}
+                        <option value="CUSTOM">Other / Custom Society Name...</option>
+                      </select>
+                      {societyName === 'CUSTOM' && (
+                        <input
+                          type="text"
+                          value={customSociety}
+                          onChange={(e) => setCustomSociety(e.target.value)}
+                          placeholder="Enter your society or community name"
+                          className="w-full mt-2 border-2 border-amber-300 bg-white rounded-xl p-2 text-xs font-semibold text-slate-900 outline-none"
+                        />
+                      )}
+                    </div>
+
+                    {/* Squad Name & Crew Size */}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Squad Name
+                        </label>
+                        <input
+                          type="text"
+                          value={squadName}
+                          onChange={(e) => setSquadName(e.target.value)}
+                          placeholder="e.g. Rapid Clean Crew"
+                          className="w-full border-2 border-amber-200 bg-white rounded-xl p-2 text-xs font-semibold text-slate-800 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Crew Size
+                        </label>
+                        <select
+                          value={crewSize}
+                          onChange={(e) => setCrewSize(e.target.value)}
+                          className="w-full border-2 border-amber-200 bg-white rounded-xl p-2 text-xs font-semibold text-slate-800 outline-none"
+                        >
+                          <option value="4 Workers Squad">4 Workers Squad</option>
+                          <option value="6 Workers Squad">6 Workers Squad</option>
+                          <option value="8 Workers Squad">8 Workers Squad</option>
+                          <option value="10+ Workers Squad">10+ Workers Squad</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Specialty */}
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                        Primary Society Service
+                      </label>
+                      <select
+                        value={serviceSpecialty}
+                        onChange={(e) => setServiceSpecialty(e.target.value)}
+                        className="w-full border-2 border-amber-200 bg-white rounded-xl p-2 text-xs font-semibold text-slate-800 outline-none"
+                      >
+                        <option value="Overhead & Underground Water Tank Disinfection">
+                          💧 Water Tank Disinfection (Overhead & Underground)
+                        </option>
+                        <option value="Society Substation & Electrical AMC">
+                          ⚡ Society Electrical AMC & Pump Maintenance
+                        </option>
+                        <option value="Common Area Jet Washing & Sanitization">
+                          🧹 Common Area High-Pressure Jetting & Buffing
+                        </option>
+                        <option value="Storm Drainage & Underground Pipeline Jetting">
+                          🚿 Storm Drainage & Underground Pipeline Jetting
+                        </option>
+                      </select>
+                    </div>
+
+                    {/* Available Gear */}
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-600 mb-1">
+                        Industrial Equipment Available
+                      </label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[
+                          'High-Pressure Jet Washer',
+                          'UV Disinfection Lamp',
+                          'Submersible Drainage Pump',
+                          'Safety Harnesses & Helmets',
+                          'Multi-Meter & Phase Tester'
+                        ].map((gear) => {
+                          const active = equipmentGear.includes(gear);
+                          return (
+                            <button
+                              key={gear}
+                              type="button"
+                              onClick={() => {
+                                setEquipmentGear((prev) =>
+                                  prev.includes(gear) ? prev.filter((g) => g !== gear) : [...prev, gear]
+                                );
+                              }}
+                              className={`text-[10px] px-2 py-1 rounded-lg border font-semibold flex items-center gap-1 transition ${
+                                active
+                                  ? 'bg-amber-400 text-teal-950 border-amber-500 shadow-xs'
+                                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                              }`}
+                            >
+                              {active && <Check className="w-2.5 h-2.5" />}
+                              <span>{gear}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <button
                   type="button"

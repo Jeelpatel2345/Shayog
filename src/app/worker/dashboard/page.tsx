@@ -7,7 +7,7 @@ import {
   Calendar, Home, MessageSquare, User, Navigation, Phone, 
   CheckCircle2, X, Upload, ShieldCheck, Check, ExternalLink,
   ChevronDown, HelpCircle, ArrowRight, KeyRound, AlertCircle,
-  Star, ThumbsUp, Sparkles, Users, Building2
+  Star, ThumbsUp, Sparkles, Users, Building2, LogOut
 } from 'lucide-react';
 import RealTrackingMap from '@/components/RealTrackingMap';
 import BottomNav from '@/components/BottomNav';
@@ -371,6 +371,28 @@ export default function WorkerDashboard() {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (e) {}
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('sahyog-logged-in');
+      localStorage.removeItem('sahyog-role');
+      localStorage.removeItem('sahyog-user-name');
+      localStorage.removeItem('sahyog-user-phone');
+      localStorage.removeItem('sahyog-user-email');
+      localStorage.removeItem('sahyog-user-city');
+      localStorage.removeItem('sahyog-user-address');
+      localStorage.removeItem('sahyog_worker_mode');
+      localStorage.removeItem('sahyog_active_job_status');
+      localStorage.removeItem('sahyog-service-scope');
+      localStorage.removeItem('sahyog-user-bookings');
+      localStorage.removeItem('sahyog_squad_name');
+      localStorage.removeItem('sahyog_society_name');
+      window.location.href = '/login';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-100/70 pb-28 text-slate-900">
       {/* Container to maintain max width on mobile while looking elegant on desktop */}
@@ -399,7 +421,7 @@ export default function WorkerDashboard() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
             <Link 
               href="/notifications" 
               className="p-2 rounded-full hover:bg-slate-100 text-slate-600 transition relative"
@@ -416,6 +438,15 @@ export default function WorkerDashboard() {
             >
               {initials}
             </Link>
+
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="p-2 rounded-full hover:bg-rose-50 text-slate-400 hover:text-rose-600 transition cursor-pointer"
+              title="Log Out to Login Page"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
           </div>
         </header>
 

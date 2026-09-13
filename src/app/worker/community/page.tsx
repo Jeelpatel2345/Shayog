@@ -168,6 +168,28 @@ export default function WorkerCommunityDashboard() {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (e) {}
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('sahyog-logged-in');
+      localStorage.removeItem('sahyog-role');
+      localStorage.removeItem('sahyog-user-name');
+      localStorage.removeItem('sahyog-user-phone');
+      localStorage.removeItem('sahyog-user-email');
+      localStorage.removeItem('sahyog-user-city');
+      localStorage.removeItem('sahyog-user-address');
+      localStorage.removeItem('sahyog_worker_mode');
+      localStorage.removeItem('sahyog_active_job_status');
+      localStorage.removeItem('sahyog-service-scope');
+      localStorage.removeItem('sahyog-user-bookings');
+      localStorage.removeItem('sahyog_squad_name');
+      localStorage.removeItem('sahyog_society_name');
+      window.location.href = '/login';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 pb-32 text-slate-900">
       {/* Locked Community Squad Top Bar */}
@@ -190,13 +212,23 @@ export default function WorkerCommunityDashboard() {
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setShowExitConfirm(true)}
-            className="text-[11px] font-bold text-teal-200 hover:text-white px-3 py-1.5 rounded-xl border border-teal-700 hover:bg-teal-900/60 transition cursor-pointer"
-          >
-            Exit to Individual
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowExitConfirm(true)}
+              className="text-[11px] font-bold text-teal-200 hover:text-white px-3 py-1.5 rounded-xl border border-teal-700 hover:bg-teal-900/60 transition cursor-pointer"
+            >
+              Exit to Individual
+            </button>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="p-1.5 rounded-xl hover:bg-rose-900/50 text-rose-300 hover:text-rose-100 transition cursor-pointer"
+              title="Log Out to Login Page"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
 

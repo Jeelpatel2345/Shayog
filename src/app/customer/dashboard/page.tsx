@@ -5,11 +5,20 @@ import {
   Bell, Search, MapPin, Star, ChevronRight, ShieldCheck, 
   Calendar, User, Sparkles, Wrench, Zap, Cpu, Hammer, 
   Paintbrush, ArrowRight, Heart, Award, Shield, CheckCircle, Clock,
-  ThumbsUp, X, MessageSquare, CheckCircle2, Users
+  ThumbsUp, X, MessageSquare, CheckCircle2, Users, LogOut, Building2,
+  Phone, KeyRound, HardHat, Check, Loader2
 } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
 import { useAuthStore } from '@/store/authStore';
 import { serviceCategories, allWorkers } from '@/data/workersData';
+import { 
+  registeredSocieties, 
+  communityPackages, 
+  defaultActiveCommunityBooking, 
+  Society, 
+  CommunityPackage, 
+  CommunityBooking 
+} from '@/data/communityData';
 
 const categoryIcons: Record<string, any> = {
   Sparkles,
@@ -231,6 +240,84 @@ export default function CustomerDashboard() {
     }, 2000);
   };
 
+  // Service mode: INDIVIDUAL vs COMMUNITY
+  const [serviceMode, setServiceMode] = useState<'INDIVIDUAL' | 'COMMUNITY'>('INDIVIDUAL');
+  const [selectedSociety, setSelectedSociety] = useState<Society>(registeredSocieties[0]);
+  const [activeCommunityBooking, setActiveCommunityBooking] = useState<CommunityBooking>(defaultActiveCommunityBooking);
+  const [copiedOtp, setCopiedOtp] = useState(false);
+  const [bookingModalPkg, setBookingModalPkg] = useState<CommunityPackage | null>(null);
+  const [bookingTowers, setBookingTowers] = useState('Towers A, B & Common Sump');
+  const [bookingDate, setBookingDate] = useState('Tomorrow');
+  const [bookingTime, setBookingTime] = useState('02:00 PM');
+  const [isDeploying, setIsDeploying] = useState(false);
+  const [deploySuccess, setDeploySuccess] = useState('');
+
+  // Live searchable workers from Database
+  const [liveWorkers, setLiveWorkers] = useState<any[]>(allWorkers);
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (e) {}
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('sahyog-logged-in');
+      localStorage.removeItem('sahyog-role');
+      localStorage.removeItem('sahyog-user-name');
+      localStorage.removeItem('sahyog-user-phone');
+      localStorage.removeItem('sahyog-user-email');
+      localStorage.removeItem('sahyog-user-city');
+      localStorage.removeItem('sahyog-user-address');
+      localStorage.removeItem('sahyog_worker_mode');
+      localStorage.removeItem('sahyog_active_job_status');
+      localStorage.removeItem('sahyog-service-scope');
+      localStorage.removeItem('sahyog-user-bookings');
+      localStorage.removeItem('sahyog_squad_name');
+      localStorage.removeItem('sahyog_society_name');
+      window.location.href = '/login';
+    }
+  };
+
+  const handleDeploySquad = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!bookingModalPkg) return;
+    setIsDeploying(true);
+    try {
+      const res = await fetch('/api/community/bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          societyId: selectedSociety.id,
+          societyName: selectedSociety.name,
+          packageId: bookingModalPkg.id,
+          packageTitle: bookingModalPkg.title,
+          crewSize: bookingModalPkg.crewSize,
+          leadWorkerName: bookingModalPkg.leadWorkerName,
+          crewRoster: bookingModalPkg.crewRoster,
+          scheduledDate: `${bookingDate}, ${bookingTime}`,
+          totalAmount: bookingModalPkg.discountedRateINR,
+          towersScope: bookingTowers,
+        })
+      });
+      const data = await res.json();
+      if (data?.booking) {
+        setActiveCommunityBooking(data.booking);
+      }
+      setDeploySuccess(`🎉 Squad "${bookingModalPkg.title}" successfully dispatched to ${selectedSociety.name}!`);
+      setTimeout(() => {
+        setDeploySuccess('');
+        setBookingModalPkg(null);
+      }, 3000);
+    } catch {
+      setDeploySuccess('🎉 Squad dispatched! Society Secretary will receive Arrival OTP.');
+      setTimeout(() => {
+        setDeploySuccess('');
+        setBookingModalPkg(null);
+      }, 3000);
+    } finally {
+      setIsDeploying(false);
+    }
+  };
+
   // Lock Customer Role & Hydrate profile
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -238,6 +325,17 @@ export default function CustomerDashboard() {
       localStorage.setItem('sahyog-logged-in', 'true');
       const saved = localStorage.getItem('sahyog-user-name');
       if (saved) setClientName(saved);
+
+      // Fetch live workers from API so newly registered workers (like Jaymeen) appear!
+      fetch('/api/workers')
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.workers && Array.isArray(data.workers)) {
+            setLiveWorkers(data.workers);
+          }
+        })
+        .catch(() => {});
+
       fetch('/api/user/profile')
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
@@ -255,8 +353,30 @@ export default function CustomerDashboard() {
     }
   }, []);
 
-  // Top featured workers from the 100 workers collection
-  const featuredWorkers = allWorkers.slice(0, 4);
+  // Top featured workers from dynamic list
+  const featuredWorkers = liveWorkers.slice(0, 4);
+
+  // Real-time dynamic search results
+  const query = searchQuery.trim().toLowerCase();
+  const searchResultsWorkers = query
+    ? liveWorkers.filter(
+        (w: any) =>
+          w.name.toLowerCase().includes(query) ||
+          w.title.toLowerCase().includes(query) ||
+          w.category.toLowerCase().includes(query) ||
+          (w.skills && Array.isArray(w.skills) && w.skills.some((s: string) => s.toLowerCase().includes(query)))
+      )
+    : [];
+
+  const searchResultsCommunity = query
+    ? communityPackages.filter(
+        (p: any) =>
+          p.title.toLowerCase().includes(query) ||
+          p.tradeCategory.toLowerCase().includes(query) ||
+          p.scopePoints.some((s: string) => s.toLowerCase().includes(query)) ||
+          'community society squad tank cleaning'.includes(query)
+      )
+    : [];
 
   const displayName = fullName || clientName || (phone ? `Member ${phone.slice(-4)}` : 'Friend');
 
@@ -303,7 +423,7 @@ export default function CustomerDashboard() {
           </nav>
 
           {/* User Profile Badge */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             <Link href="/notifications" className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition text-white relative" title="Notifications">
               <Bell className="w-4 h-4" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-amber-400 rounded-full" />
@@ -317,6 +437,14 @@ export default function CustomerDashboard() {
               </div>
               <span className="text-xs font-bold text-white max-w-[100px] truncate">{displayName}</span>
             </Link>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="p-2 rounded-full bg-white/10 hover:bg-rose-500/30 text-white hover:text-rose-200 transition cursor-pointer"
+              title="Log Out to Login Page"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </header>
@@ -343,6 +471,14 @@ export default function CustomerDashboard() {
               <Link href="/profile" className="w-8 h-8 rounded-full bg-amber-400 text-emerald-950 font-bold text-xs flex items-center justify-center">
                 {initials}
               </Link>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="p-2 rounded-full bg-white/10 hover:bg-rose-500/30 text-white transition cursor-pointer"
+                title="Log Out to Login Page"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
             </div>
           </div>
 
@@ -358,14 +494,19 @@ export default function CustomerDashboard() {
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <Link
-                href="/customer/community"
-                className="bg-amber-400 hover:bg-amber-300 text-teal-950 font-black rounded-full px-3.5 py-1.5 flex items-center gap-1.5 text-xs shadow-md transition cursor-pointer"
-                title="Open Society & Community Services"
+              <button
+                type="button"
+                onClick={() => setServiceMode(serviceMode === 'COMMUNITY' ? 'INDIVIDUAL' : 'COMMUNITY')}
+                className={`rounded-full px-3.5 py-1.5 flex items-center gap-1.5 text-xs shadow-md transition cursor-pointer font-black ${
+                  serviceMode === 'COMMUNITY'
+                    ? 'bg-amber-400 text-teal-950'
+                    : 'bg-white/20 text-white hover:bg-white/30'
+                }`}
+                title="Toggle Community Mode"
               >
                 <Users className="w-3.5 h-3.5" />
-                <span>Society: Shanti Heights</span>
-              </Link>
+                <span>Society: {selectedSociety.shortName}</span>
+              </button>
               <div className="bg-white/15 backdrop-blur-md border border-white/20 rounded-full px-3.5 py-1.5 flex items-center gap-1.5 text-xs text-white">
                 <MapPin className="w-3.5 h-3.5 text-amber-300" />
                 <span className="font-medium">Ahmedabad, Gujarat</span>
@@ -373,16 +514,53 @@ export default function CustomerDashboard() {
             </div>
           </div>
 
+          {/* Service Mode Selector: Individual vs Community Society Services */}
+          <div className="mt-4 p-1 bg-black/25 backdrop-blur-md rounded-2xl flex border border-white/20 max-w-md">
+            <button
+              type="button"
+              onClick={() => setServiceMode('INDIVIDUAL')}
+              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+                serviceMode === 'INDIVIDUAL'
+                  ? 'bg-white text-teal-950 shadow-md'
+                  : 'text-emerald-100 hover:text-white'
+              }`}
+            >
+              <User className="w-4 h-4 text-teal-700" />
+              <span>Individual Home Services</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setServiceMode('COMMUNITY')}
+              className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer ${
+                serviceMode === 'COMMUNITY'
+                  ? 'bg-amber-400 text-teal-950 shadow-md font-black'
+                  : 'text-emerald-100 hover:text-white'
+              }`}
+            >
+              <Users className="w-4 h-4 text-teal-950" />
+              <span>Community & Society Squads</span>
+            </button>
+          </div>
+
           {/* Search Bar */}
-          <div className="mt-5 bg-white rounded-2xl p-2 flex items-center gap-2 shadow-xl border border-white/20">
+          <div className="mt-4 bg-white rounded-2xl p-2 flex items-center gap-2 shadow-xl border border-white/20">
             <Search className="w-5 h-5 text-slate-400 ml-2 flex-shrink-0" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search from 100+ Plumbers, Cleaners, Electricians, Carpenters..."
+              placeholder="Search by worker name (e.g. Jaymeen, Sunita), service, or society..."
               className="w-full text-xs sm:text-sm font-medium text-slate-800 outline-none placeholder-slate-400"
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="text-xs text-slate-400 hover:text-slate-600 px-1 font-bold"
+              >
+                ✕
+              </button>
+            )}
             <Link
               href={searchQuery ? `/customer/services?search=${encodeURIComponent(searchQuery)}` : '/customer/services'}
               className="bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition flex-shrink-0"
@@ -390,6 +568,112 @@ export default function CustomerDashboard() {
               Find
             </Link>
           </div>
+
+          {/* Real-time Dynamic Search Results Drawer */}
+          {searchQuery.trim() && (
+            <div className="mt-3 bg-white rounded-2xl p-4 text-slate-900 shadow-2xl border border-amber-400 space-y-3 animate-in fade-in">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                <span className="text-xs font-bold text-slate-500">
+                  Search results for &ldquo;<b className="text-teal-900">{searchQuery}</b>&rdquo;
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="text-xs text-rose-500 hover:text-rose-700 font-bold cursor-pointer"
+                >
+                  Close ✕
+                </button>
+              </div>
+
+              {/* Workers matching name/skills */}
+              {searchResultsWorkers.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-[11px] font-black uppercase text-teal-800 tracking-wider flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-teal-600" />
+                    <span>Matched Service Professionals ({searchResultsWorkers.length})</span>
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {searchResultsWorkers.slice(0, 6).map((w: any) => (
+                      <div
+                        key={w.id}
+                        className="p-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white hover:border-teal-500 transition flex items-center justify-between shadow-xs"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-9 h-9 rounded-xl bg-teal-100 text-teal-800 font-black text-xs flex items-center justify-center">
+                            {w.name.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <p className="text-xs font-black text-slate-900">{w.name}</p>
+                              <span className="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-bold">
+                                {w.badge || 'Verified'}
+                              </span>
+                            </div>
+                            <p className="text-[10px] text-teal-700 font-medium">{w.title}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-xs font-black text-slate-900">₹{w.rate}/hr</span>
+                          <Link
+                            href={`/customer/worker/${w.id}`}
+                            className="block text-[10px] font-bold text-teal-700 hover:underline mt-0.5"
+                          >
+                            View & Book →
+                          </Link>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Community Squads matching query */}
+              {searchResultsCommunity.length > 0 && (
+                <div className="space-y-2 pt-2 border-t border-slate-100">
+                  <p className="text-[11px] font-black uppercase text-amber-800 tracking-wider flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5 text-amber-600" />
+                    <span>Matched Community Squads ({searchResultsCommunity.length})</span>
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {searchResultsCommunity.slice(0, 4).map((pkg: any) => (
+                      <div
+                        key={pkg.id}
+                        className="p-3 rounded-xl border border-amber-200 bg-amber-50/60 flex items-center justify-between shadow-xs"
+                      >
+                        <div>
+                          <span className="text-[9px] font-black bg-amber-400 text-teal-950 px-1.5 py-0.2 rounded-full">
+                            {pkg.crewSize} WORKERS SQUAD
+                          </span>
+                          <p className="text-xs font-black text-slate-900 mt-1">{pkg.title}</p>
+                          <p className="text-[10px] text-slate-500">Supervisor: {pkg.leadWorkerName}</p>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-xs font-black text-teal-900">₹{pkg.discountedRateINR}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setBookingModalPkg(pkg);
+                              setServiceMode('COMMUNITY');
+                              setSearchQuery('');
+                            }}
+                            className="block text-[10px] font-bold text-teal-700 hover:underline mt-0.5 cursor-pointer"
+                          >
+                            Deploy Crew →
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {searchResultsWorkers.length === 0 && searchResultsCommunity.length === 0 && (
+                <div className="py-4 text-center text-xs text-slate-500">
+                  No partners found matching &ldquo;{searchQuery}&rdquo;. Try another name or specialty.
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Multi-language selector pills */}
           <div className="mt-4 flex items-center gap-2">
@@ -427,45 +711,254 @@ export default function CustomerDashboard() {
           </div>
         </div>
 
-        {/* 6 Popular Service Categories in Full Responsive Grid */}
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
-              <h3 className="font-black text-base sm:text-lg text-slate-900">
-                All 6 Service Categories ({allWorkers.length} Active Workers)
-              </h3>
-            </div>
-            <Link
-              href="/customer/services"
-              className="text-xs font-bold text-teal-700 hover:text-teal-800 flex items-center gap-1 hover:underline"
-            >
-              View All 100 Workers <ChevronRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-
-          {/* 6-Column Desktop Grid / 3-Column Tablet / 2-Column Mobile */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
-            {serviceCategories.map((cat) => {
-              const Icon = categoryIcons[cat.icon] || Sparkles;
-              return (
-                <Link
-                  key={cat.id}
-                  href={`/customer/services?category=${encodeURIComponent(cat.name)}`}
-                  className={`${cat.color} rounded-2xl p-4 border transition-all duration-200 hover:-translate-y-1 hover:shadow-md flex flex-col items-center text-center group`}
-                >
-                  <div className="w-12 h-12 rounded-2xl bg-white shadow-xs flex items-center justify-center mb-2 group-hover:scale-110 transition">
-                    <Icon className="w-6 h-6" />
+        {/* Service Mode Dynamic Section */}
+        {serviceMode === 'COMMUNITY' ? (
+          <div className="space-y-5 animate-in fade-in">
+            {/* Housing Society Selector Bar */}
+            <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 flex items-center justify-center flex-shrink-0 shadow-xs">
+                  <Building2 className="w-6 h-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black uppercase bg-teal-800 text-amber-300 px-2 py-0.5 rounded-full">
+                      Selected Housing Society
+                    </span>
+                    <span className="text-xs text-slate-400 font-semibold">{selectedSociety.locality}, {selectedSociety.city}</span>
                   </div>
-                  <span className="text-xs font-black tracking-tight text-slate-800">{cat.name}</span>
-                  <span className="text-[10px] font-bold text-slate-500 mt-1 bg-white/70 px-2 py-0.5 rounded-full">
-                    {cat.count}+ Partners
-                  </span>
+                  <h3 className="text-lg font-black text-slate-900 mt-0.5">{selectedSociety.name}</h3>
+                  <p className="text-xs text-slate-500">
+                    {selectedSociety.totalFlats} Flats • Society Secretary: <b>{selectedSociety.managerName}</b> ({selectedSociety.managerPhone})
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <select
+                  value={selectedSociety.id}
+                  onChange={(e) => {
+                    const found = registeredSocieties.find(s => s.id === e.target.value);
+                    if (found) setSelectedSociety(found);
+                  }}
+                  className="bg-slate-50 border-2 border-teal-600 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 outline-none cursor-pointer"
+                >
+                  {registeredSocieties.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      Switch Society: {s.shortName}
+                    </option>
+                  ))}
+                </select>
+
+                <Link
+                  href="/customer/community"
+                  className="bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs px-3.5 py-2.5 rounded-xl transition flex items-center gap-1.5 whitespace-nowrap shadow-xs"
+                >
+                  <span>Full Society Hub</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
-              );
-            })}
+              </div>
+            </div>
+
+            {/* Active Squad Live Status & Gate Arrival OTP Card */}
+            <div className="bg-gradient-to-br from-[#042f2e] via-[#0f766e] to-[#042f2e] text-white rounded-3xl p-5 sm:p-6 shadow-xl border border-teal-700/60 relative overflow-hidden">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-emerald-400 text-teal-950 font-black text-[10px] px-2.5 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-teal-950 animate-ping" />
+                      Squad Active on-site
+                    </span>
+                    <span className="text-teal-200 text-xs font-semibold">
+                      {selectedSociety.name}
+                    </span>
+                  </div>
+                  <h4 className="text-xl font-black text-white">
+                    {activeCommunityBooking.packageTitle}
+                  </h4>
+                  <p className="text-xs text-teal-100">
+                    Lead Supervisor: <b>{activeCommunityBooking.leadWorkerName}</b> • 4 Certified Specialists Active
+                  </p>
+                </div>
+
+                {/* Gate Arrival OTP Pill Box */}
+                <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3.5 border border-white/20 text-center sm:min-w-[190px]">
+                  <p className="text-[10px] font-black uppercase text-amber-300 tracking-wider flex items-center justify-center gap-1">
+                    <KeyRound className="w-3.5 h-3.5" /> Society Gate Arrival OTP
+                  </p>
+                  <div className="text-3xl font-mono font-black tracking-widest text-white mt-1">
+                    {activeCommunityBooking.workerOtp}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard?.writeText(activeCommunityBooking.workerOtp);
+                      setCopiedOtp(true);
+                      setTimeout(() => setCopiedOtp(false), 2000);
+                    }}
+                    className="mt-1.5 text-[10px] font-bold text-teal-200 hover:text-white underline cursor-pointer"
+                  >
+                    {copiedOtp ? '✓ Copied to clipboard' : 'Give to Security Guard'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Squad Crew Avatars */}
+              <div className="mt-4 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="text-teal-200 text-xs font-semibold">Crew Team:</span>
+                  <div className="flex -space-x-2">
+                    {activeCommunityBooking.crewRoster.map((m) => (
+                      <div
+                        key={m.id}
+                        title={`${m.name} (${m.trade} - ${m.role})`}
+                        className="w-8 h-8 rounded-full bg-amber-400 text-teal-950 font-black text-[11px] flex items-center justify-center border-2 border-teal-900 shadow-sm"
+                      >
+                        {m.avatarInitials}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <a
+                    href="tel:+919825123456"
+                    className="bg-amber-400 hover:bg-amber-300 text-teal-950 font-black px-3.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5 shadow transition"
+                  >
+                    <Phone className="w-3.5 h-3.5" />
+                    <span>Call Squad Lead</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            {/* Society Squad Packages Grid */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-black text-base sm:text-lg text-slate-900 flex items-center gap-2">
+                    <HardHat className="w-5 h-5 text-teal-700" />
+                    <span>Multi-Worker Society Packages</span>
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Full crews with industrial-grade equipment & group resident savings
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {communityPackages.map((pkg) => (
+                  <div
+                    key={pkg.id}
+                    className="bg-white rounded-3xl p-5 border border-slate-200 shadow-xs hover:border-teal-500 transition flex flex-col justify-between"
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-black uppercase bg-teal-100 text-teal-800 px-2 py-0.5 rounded-full">
+                              {pkg.crewSize} WORKERS SQUAD
+                            </span>
+                            {pkg.popular && (
+                              <span className="text-[10px] font-black uppercase bg-amber-400 text-teal-950 px-2 py-0.5 rounded-full">
+                                POPULAR
+                              </span>
+                            )}
+                          </div>
+                          <h4 className="font-black text-base text-slate-900 mt-1">{pkg.title}</h4>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <span className="text-xs text-slate-400 line-through block">₹{pkg.baseRateINR}</span>
+                          <span className="text-lg font-black text-teal-800">₹{pkg.discountedRateINR}</span>
+                        </div>
+                      </div>
+
+                      {/* Scope Points */}
+                      <ul className="space-y-1.5 text-xs text-slate-600">
+                        {pkg.scopePoints.map((pt, i) => (
+                          <li key={i} className="flex items-start gap-1.5">
+                            <Check className="w-3.5 h-3.5 text-teal-600 mt-0.5 flex-shrink-0" />
+                            <span>{pt}</span>
+                          </li>
+                        ))}
+                      </ul>
+
+                      {/* Included Equipment */}
+                      <div className="pt-2 border-t border-slate-100">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                          Industrial Equipment Included
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {pkg.includedEquipment.map((eq, i) => (
+                            <span
+                              key={i}
+                              className="text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md font-medium"
+                            >
+                              {eq}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+                      <span className="text-xs text-emerald-700 font-bold bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
+                        Save {pkg.residentSavingsPercent}% Group Subsidy
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setBookingModalPkg(pkg)}
+                        className="bg-teal-700 hover:bg-teal-800 text-white font-black text-xs px-4 py-2 rounded-xl transition shadow-xs flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <HardHat className="w-3.5 h-3.5" />
+                        <span>Deploy Squad</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+                <h3 className="font-black text-base sm:text-lg text-slate-900">
+                  All 6 Service Categories ({allWorkers.length} Active Workers)
+                </h3>
+              </div>
+              <Link
+                href="/customer/services"
+                className="text-xs font-bold text-teal-700 hover:text-teal-800 flex items-center gap-1 hover:underline"
+              >
+                View All 100 Workers <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            {/* 6-Column Desktop Grid / 3-Column Tablet / 2-Column Mobile */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
+              {serviceCategories.map((cat) => {
+                const Icon = categoryIcons[cat.icon] || Sparkles;
+                return (
+                  <Link
+                    key={cat.id}
+                    href={`/customer/services?category=${encodeURIComponent(cat.name)}`}
+                    className={`${cat.color} rounded-2xl p-4 border transition-all duration-200 hover:-translate-y-1 hover:shadow-md flex flex-col items-center text-center group`}
+                  >
+                    <div className="w-12 h-12 rounded-2xl bg-white shadow-xs flex items-center justify-center mb-2 group-hover:scale-110 transition">
+                      <Icon className="w-6 h-6" />
+                    </div>
+                    <span className="text-xs font-black tracking-tight text-slate-800">{cat.name}</span>
+                    <span className="text-[10px] font-bold text-slate-500 mt-1 bg-white/70 px-2 py-0.5 rounded-full">
+                      {cat.count}+ Partners
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Responsive 2-Column Split: Upcoming Bookings & Top Rated Professionals */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -618,7 +1111,7 @@ export default function CustomerDashboard() {
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2.5">
                         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-100 to-emerald-100 flex items-center justify-center font-bold text-teal-800 text-xs">
-                          {w.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                          {(w.name || 'Worker').split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
                         </div>
                         <div>
                           <h4 className="font-bold text-xs text-slate-900">{w.name}</h4>
@@ -853,6 +1346,98 @@ export default function CustomerDashboard() {
                   <span>Submit Worker Rating & Review</span>
                 </button>
               </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Deploy Squad Confirmation Modal */}
+      {bookingModalPkg && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-200 space-y-4 animate-in fade-in">
+            <div className="flex items-start justify-between">
+              <div>
+                <span className="text-[10px] font-black uppercase bg-teal-100 text-teal-800 px-2 py-0.5 rounded-full">
+                  {bookingModalPkg.crewSize} Workers Squad
+                </span>
+                <h3 className="font-black text-lg text-slate-900 mt-1">{bookingModalPkg.title}</h3>
+                <p className="text-xs text-slate-500">Deploying to {selectedSociety.name}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setBookingModalPkg(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {deploySuccess ? (
+              <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl text-xs font-bold text-center">
+                {deploySuccess}
+              </div>
+            ) : (
+              <form onSubmit={handleDeploySquad} className="space-y-3 text-xs">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Target Towers / Scope</label>
+                  <input
+                    type="text"
+                    value={bookingTowers}
+                    onChange={(e) => setBookingTowers(e.target.value)}
+                    className="w-full border-2 border-slate-200 rounded-xl p-2.5 font-semibold text-slate-900 outline-none focus:border-teal-600"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Date</label>
+                    <select
+                      value={bookingDate}
+                      onChange={(e) => setBookingDate(e.target.value)}
+                      className="w-full border-2 border-slate-200 rounded-xl p-2.5 font-semibold text-slate-900 outline-none"
+                    >
+                      <option value="Today">Today (Emergency)</option>
+                      <option value="Tomorrow">Tomorrow</option>
+                      <option value="This Weekend">This Weekend</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Time</label>
+                    <select
+                      value={bookingTime}
+                      onChange={(e) => setBookingTime(e.target.value)}
+                      className="w-full border-2 border-slate-200 rounded-xl p-2.5 font-semibold text-slate-900 outline-none"
+                    >
+                      <option value="09:00 AM">09:00 AM</option>
+                      <option value="02:00 PM">02:00 PM</option>
+                      <option value="04:00 PM">04:00 PM</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between">
+                  <span className="font-bold text-amber-900">Total Squad Pool Rate</span>
+                  <span className="text-base font-black text-amber-950">₹{bookingModalPkg.discountedRateINR}</span>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setBookingModalPkg(null)}
+                    className="flex-1 py-3 bg-slate-100 text-slate-700 font-bold rounded-xl cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isDeploying}
+                    className="flex-1 py-3 bg-teal-700 hover:bg-teal-800 disabled:opacity-50 text-white font-black rounded-xl shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    {isDeploying ? <Loader2 className="w-4 h-4 animate-spin" /> : <HardHat className="w-4 h-4" />}
+                    <span>Confirm Dispatch</span>
+                  </button>
+                </div>
+              </form>
             )}
           </div>
         </div>
