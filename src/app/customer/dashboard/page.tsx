@@ -5,7 +5,7 @@ import {
   Bell, Search, MapPin, Star, ChevronRight, ShieldCheck, 
   Calendar, User, Sparkles, Wrench, Zap, Cpu, Hammer, 
   Paintbrush, ArrowRight, Heart, Award, Shield, CheckCircle, Clock,
-  ThumbsUp, X, MessageSquare, CheckCircle2
+  ThumbsUp, X, MessageSquare, CheckCircle2, Users
 } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
 import { useAuthStore } from '@/store/authStore';
@@ -357,9 +357,19 @@ export default function CustomerDashboard() {
               </h2>
             </div>
 
-            <div className="self-start sm:self-auto bg-white/15 backdrop-blur-md border border-white/20 rounded-full px-3.5 py-1.5 flex items-center gap-1.5 text-xs text-white">
-              <MapPin className="w-3.5 h-3.5 text-amber-300" />
-              <span className="font-medium">Gujarat / Pan-India Multi-City</span>
+            <div className="flex flex-wrap items-center gap-2">
+              <Link
+                href="/customer/community"
+                className="bg-amber-400 hover:bg-amber-300 text-teal-950 font-black rounded-full px-3.5 py-1.5 flex items-center gap-1.5 text-xs shadow-md transition cursor-pointer"
+                title="Open Society & Community Services"
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span>Society: Shanti Heights</span>
+              </Link>
+              <div className="bg-white/15 backdrop-blur-md border border-white/20 rounded-full px-3.5 py-1.5 flex items-center gap-1.5 text-xs text-white">
+                <MapPin className="w-3.5 h-3.5 text-amber-300" />
+                <span className="font-medium">Ahmedabad, Gujarat</span>
+              </div>
             </div>
           </div>
 

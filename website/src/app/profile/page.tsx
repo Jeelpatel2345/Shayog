@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { 
   User, Phone, Mail, MapPin, ShieldCheck, CheckCircle2, 
-  Save, LogOut, Loader2, Smartphone, AlertCircle 
+  Save, LogOut, Loader2, Smartphone, AlertCircle, Users, ArrowRight 
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 
@@ -134,6 +135,34 @@ export default function WebProfilePage() {
           <p className="text-xs sm:text-sm text-slate-500 mt-1">
             Manage your personal contact info and preferred address across Gujarat.
           </p>
+        </div>
+
+        {/* Community & Society Services Banner */}
+        <div className="bg-gradient-to-br from-[#042f2e] via-[#0f766e] to-[#042f2e] text-white rounded-3xl p-6 shadow-xl border border-teal-800/40 relative overflow-hidden">
+          <div className="absolute -right-8 -bottom-8 w-40 h-40 bg-amber-400/10 rounded-full blur-2xl pointer-events-none" />
+          
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1 max-w-xl">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/20 border border-amber-300/30 text-amber-300 text-[11px] font-black uppercase tracking-wider">
+                <Users className="w-3.5 h-3.5" />
+                <span>Multi-Worker Crew • Housing Societies</span>
+              </div>
+              <h3 className="text-xl font-black text-white pt-1">
+                Community & Society Services (सामुदायिक सेवाएँ)
+              </h3>
+              <p className="text-xs text-teal-100/90 leading-relaxed">
+                Deploy 4–6 worker specialized squads for full society water tank disinfection, storm drainage jetting, electrical AMC & common area sanitization with group resident discounts.
+              </p>
+            </div>
+
+            <Link
+              href="/community"
+              className="bg-amber-400 hover:bg-amber-300 text-teal-950 font-black px-5 py-3 rounded-xl text-xs flex items-center justify-center gap-2 transition shadow-md whitespace-nowrap self-start sm:self-center cursor-pointer"
+            >
+              <span>Open Community Dashboard</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
         </div>
 
         {savedSuccess && (

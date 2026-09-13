@@ -7,7 +7,7 @@ import {
   Calendar, Home, MessageSquare, User, Navigation, Phone, 
   CheckCircle2, X, Upload, ShieldCheck, Check, ExternalLink,
   ChevronDown, HelpCircle, ArrowRight, KeyRound, AlertCircle,
-  Star, ThumbsUp, Sparkles
+  Star, ThumbsUp, Sparkles, Users, Building2
 } from 'lucide-react';
 import RealTrackingMap from '@/components/RealTrackingMap';
 import BottomNav from '@/components/BottomNav';
@@ -53,6 +53,14 @@ export default function WorkerDashboard() {
   // Lock Worker Role, Profile Hydration & Live 3-Second Cross-Device Polling
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      // STRICT COMMUNITY ISOLATION:
+      // If worker provides service as community, they are locked to community dashboard
+      // and cannot see individual worker dashboard or private jobs!
+      if (localStorage.getItem('sahyog_worker_mode') === 'COMMUNITY') {
+        window.location.href = '/worker/community';
+        return;
+      }
+
       localStorage.setItem('sahyog-role', 'WORKER');
       localStorage.setItem('sahyog-logged-in', 'true');
 
@@ -460,6 +468,46 @@ export default function WorkerDashboard() {
                 </span>
               </div>
             )}
+          </div>
+
+          {/* Society Squad Mode Option */}
+          <div className="bg-gradient-to-r from-teal-900 via-slate-900 to-teal-950 rounded-2xl p-4 text-white shadow-md border border-teal-800/60 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/10 rounded-full blur-2xl pointer-events-none" />
+            <div className="flex items-start justify-between gap-3 relative z-10">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-teal-500/20 border border-teal-400/30 flex items-center justify-center flex-shrink-0 text-teal-300">
+                  <Users className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-black tracking-wide text-white uppercase">Society Squad Mode</span>
+                    <span className="text-[10px] font-black bg-teal-400 text-slate-950 px-2 py-0.5 rounded-full">CREW</span>
+                  </div>
+                  <p className="text-xs text-slate-300 mt-0.5 leading-snug">
+                    Provide services in societies with multi-worker teams & pool earnings
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-3.5 pt-3 border-t border-white/10 flex items-center justify-between">
+              <span className="text-[11px] text-teal-300 font-semibold flex items-center gap-1">
+                <Building2 className="w-3.5 h-3.5" /> 4+ Societies Active
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem('sahyog_worker_mode', 'COMMUNITY');
+                    window.location.href = '/worker/community';
+                  }
+                }}
+                className="px-3.5 py-1.5 bg-teal-500 hover:bg-teal-400 text-slate-950 font-black text-xs rounded-xl shadow transition flex items-center gap-1.5 cursor-pointer"
+              >
+                <span>Provide Community Service</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
 
           {/* Weekly Earnings Card */}

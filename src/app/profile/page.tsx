@@ -6,7 +6,8 @@ import {
   ArrowLeft, Bell, User, MapPin, Phone, Mail, ShieldCheck, 
   CreditCard, Globe, ChevronRight, LogOut, Heart, FileText, 
   HelpCircle, Settings, Camera, CheckCircle2, AlertCircle, 
-  Sparkles, Wrench, Clock, Star, Edit3, Plus, SwitchCamera, Smartphone, Save, Loader2, Database
+  Sparkles, Wrench, Clock, Star, Edit3, Plus, SwitchCamera, Smartphone, Save, Loader2, Database,
+  Users, ArrowRight
 } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
 import { useAuthStore } from '@/store/authStore';
@@ -242,6 +243,50 @@ export default function ProfilePage() {
               <p className="text-[11px] text-slate-400 font-semibold">Trust Score</p>
               <p className="text-base font-black text-slate-900 mt-0.5">100%</p>
             </div>
+          </div>
+        </div>
+
+        {/* Community & Society Services Entry Banner */}
+        <div className="bg-gradient-to-br from-[#042f2e] via-[#0f766e] to-[#042f2e] text-white rounded-3xl p-5 sm:p-6 shadow-xl border border-teal-800/40 relative overflow-hidden">
+          <div className="absolute -right-8 -bottom-8 w-36 h-36 bg-amber-400/10 rounded-full blur-2xl pointer-events-none" />
+          
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-400/20 border border-amber-300/30 text-amber-300 text-[11px] font-black uppercase tracking-wider">
+                <Users className="w-3.5 h-3.5" />
+                <span>Multi-Worker Crew • Housing Societies</span>
+              </div>
+              <h3 className="text-lg sm:text-xl font-black text-white pt-1">
+                Community & Society Services (सामुदायिक सेवाएँ)
+              </h3>
+              <p className="text-xs text-teal-100/90 leading-relaxed max-w-md">
+                Deploy 4–6 worker specialized squads for full society water tank disinfection, drainage jetting, common area buffing & electrical infrastructure with group discounts.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 pt-4 text-[11px]">
+            <span className="bg-white/10 px-2.5 py-1 rounded-lg font-semibold text-teal-100 flex items-center gap-1">
+              <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+              <span>Society Gate OTP Protected</span>
+            </span>
+            <span className="bg-white/10 px-2.5 py-1 rounded-lg font-semibold text-teal-100 flex items-center gap-1">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              <span>Up to 35% Resident Group Subsidy</span>
+            </span>
+          </div>
+
+          <div className="pt-4 mt-4 border-t border-white/10 flex items-center justify-between">
+            <div className="text-xs text-teal-200">
+              <span className="text-white font-bold">Shanti Heights Resident Society</span> • Sector 12
+            </div>
+            <Link
+              href="/customer/community"
+              className="bg-amber-400 hover:bg-amber-300 text-teal-950 font-black px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition shadow-md cursor-pointer"
+            >
+              <span>Open Community Dashboard</span>
+              <ArrowRight className="w-4 h-4" />
+            </Link>
           </div>
         </div>
 

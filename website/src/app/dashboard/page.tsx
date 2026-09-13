@@ -86,7 +86,14 @@ export default function CustomerDashboardPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href="/community"
+              className="bg-emerald-900/80 hover:bg-emerald-900 text-white font-black text-xs px-4 py-3 rounded-xl border border-emerald-500/50 transition shadow-sm flex items-center gap-2 cursor-pointer"
+            >
+              <Users className="w-4 h-4 text-amber-300" />
+              <span>Society: Shanti Heights</span>
+            </Link>
             <Link
               href="/services"
               className="bg-amber-400 hover:bg-amber-300 text-emerald-950 font-black text-xs px-5 py-3 rounded-xl transition shadow-md flex items-center gap-2"
