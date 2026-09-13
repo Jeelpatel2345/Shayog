@@ -7,10 +7,26 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const customerId = searchParams.get('customerId');
     const workerProfileId = searchParams.get('workerProfileId');
+    const workerName = searchParams.get('workerName');
+    const workerPhone = searchParams.get('workerPhone');
 
     const where: Record<string, unknown> = {};
     if (customerId) where.customerId = customerId;
     if (workerProfileId) where.workerProfileId = workerProfileId;
+    if (workerName && workerName.trim()) {
+      where.workerProfile = {
+        user: {
+          fullName: { contains: workerName.trim(), mode: 'insensitive' }
+        }
+      };
+    } else if (workerPhone && workerPhone.trim()) {
+      const cleanP = workerPhone.replace(/\D/g, '').slice(-10);
+      where.workerProfile = {
+        user: {
+          phone: { contains: cleanP }
+        }
+      };
+    }
 
     const bookings = await prisma.booking.findMany({
       where,
@@ -48,7 +64,7 @@ export async function POST(request: NextRequest) {
       if (!customer) {
         customer = await prisma.user.create({
           data: {
-            phone: '+919876543210',
+            phone: body.customerPhone || '+919876543210',
             fullName: body.customerName || 'Jeel Patel',
             role: 'CUSTOMER',
           }
@@ -65,6 +81,13 @@ export async function POST(request: NextRequest) {
       }).catch(() => null);
     }
     const targetWorkerName = (body.workerName || 'Sunita Mehra').trim();
+    if (!workerProfile && body.workerPhone) {
+      const cleanWP = body.workerPhone.replace(/\D/g, '').slice(-10);
+      workerProfile = await prisma.workerProfile.findFirst({
+        where: { user: { phone: { contains: cleanWP } } },
+        include: { user: true }
+      }).catch(() => null);
+    }
     if (!workerProfile && targetWorkerName) {
       workerProfile = await prisma.workerProfile.findFirst({
         where: { user: { fullName: { contains: targetWorkerName, mode: 'insensitive' } } },
@@ -72,26 +95,53 @@ export async function POST(request: NextRequest) {
       }).catch(() => null);
     }
     if (!workerProfile) {
-      // Create dedicated worker profile matching targetWorkerName
+      // Create or link dedicated worker profile matching targetWorkerName
       const randDigits = Math.floor(1000000000 + Math.random() * 9000000000).toString();
-      const workerUser = await prisma.user.create({
-        data: {
-          phone: `+91${randDigits}`,
-          fullName: targetWorkerName,
-          role: 'WORKER',
-          workerProfile: {
-            create: {
+      const workerPhone = body.workerPhone 
+        ? (body.workerPhone.startsWith('+91') ? body.workerPhone : `+91${body.workerPhone.replace(/\D/g, '').slice(-10)}`)
+        : `+91${randDigits}`;
+
+      let workerUser = await prisma.user.findFirst({
+        where: { phone: { contains: workerPhone.slice(-10) } },
+        include: { workerProfile: true }
+      }).catch(() => null);
+
+      if (workerUser) {
+        if (!workerUser.workerProfile) {
+          workerProfile = await prisma.workerProfile.create({
+            data: {
+              userId: workerUser.id,
               primaryWorkArea: body.city || 'Ahmedabad',
               hourlyRate: body.hourlyRate || 350,
               rating: 4.9,
               yearsExperience: 5,
               verificationStatus: 'APPROVED'
+            },
+            include: { user: true }
+          }).catch(() => null);
+        } else {
+          workerProfile = workerUser.workerProfile;
+        }
+      } else {
+        workerUser = await prisma.user.create({
+          data: {
+            phone: workerPhone,
+            fullName: targetWorkerName,
+            role: 'WORKER',
+            workerProfile: {
+              create: {
+                primaryWorkArea: body.city || 'Ahmedabad',
+                hourlyRate: body.hourlyRate || 350,
+                rating: 4.9,
+                yearsExperience: 5,
+                verificationStatus: 'APPROVED'
+              }
             }
-          }
-        },
-        include: { workerProfile: true }
-      }).catch(() => null);
-      workerProfile = workerUser?.workerProfile;
+          },
+          include: { workerProfile: true }
+        }).catch(() => null);
+        workerProfile = workerUser?.workerProfile;
+      }
     }
     if (!workerProfile) {
       workerProfile = await prisma.workerProfile.findFirst({ include: { user: true } }).catch(() => null);
@@ -101,33 +151,64 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unable to link customer or worker', success: false }, { status: 400 });
     }
 
-    const code = generateBookingCode();
+    // Safe date parsing to prevent "Invalid Date" Prisma errors
+    let scheduledDateObj = new Date(Date.now() + 86400000);
+    if (body.scheduledDate) {
+      if (typeof body.scheduledDate === 'string') {
+        const lower = body.scheduledDate.toLowerCase().trim();
+        if (lower.includes('today')) {
+          scheduledDateObj = new Date();
+        } else if (lower.includes('day after')) {
+          scheduledDateObj = new Date(Date.now() + 2 * 86400000);
+        } else if (lower.includes('tomorrow')) {
+          scheduledDateObj = new Date(Date.now() + 86400000);
+        } else {
+          const parsed = new Date(body.scheduledDate);
+          if (!isNaN(parsed.getTime())) {
+            scheduledDateObj = parsed;
+          }
+        }
+      } else {
+        const parsed = new Date(body.scheduledDate);
+        if (!isNaN(parsed.getTime())) {
+          scheduledDateObj = parsed;
+        }
+      }
+    }
+
+    const code = body.bookingCode || generateBookingCode();
     const serviceFee = body.serviceFee || Math.round((body.totalAmount || 500) * 0.8);
     const platformFee = body.platformFee || 25;
     const gstAmount = body.gstAmount || Math.round(serviceFee * 0.18);
     const totalAmount = body.totalAmount || (serviceFee + platformFee + gstAmount);
 
+    const bookingData: any = {
+      bookingCode: code,
+      customerId: customer.id,
+      workerProfileId: workerProfile.id,
+      serviceTitle: body.serviceTitle || body.serviceName || 'Home Service',
+      scheduledDate: scheduledDateObj,
+      scheduledTime: body.scheduledTime || body.time || '10:00 AM',
+      serviceLocation: body.serviceLocation || body.address || 'Ahmedabad, Gujarat',
+      city: body.city || 'Ahmedabad',
+      state: 'Gujarat',
+      totalAmount: totalAmount,
+      serviceFee: serviceFee,
+      materialFee: body.materialFee || 0,
+      platformFee: platformFee,
+      gstAmount: gstAmount,
+      paymentMethod: body.paymentMethod || 'UPI',
+      workerOtp: body.workerOtp || String(Math.floor(1000 + Math.random() * 9000)),
+      paymentTiming: body.paymentTiming || 'AFTER_SERVICE',
+      status: body.status || 'CONFIRMED',
+    };
+
+    if (body.id) {
+      bookingData.id = body.id;
+    }
+
     const booking = await prisma.booking.create({
-      data: {
-        bookingCode: code,
-        customerId: customer.id,
-        workerProfileId: workerProfile.id,
-        serviceTitle: body.serviceTitle || body.serviceName || 'Home Service',
-        scheduledDate: new Date(body.scheduledDate || Date.now() + 86400000),
-        scheduledTime: body.scheduledTime || body.time || '10:00 AM',
-        serviceLocation: body.serviceLocation || body.address || 'Ahmedabad, Gujarat',
-        city: body.city || 'Ahmedabad',
-        state: 'Gujarat',
-        totalAmount: totalAmount,
-        serviceFee: serviceFee,
-        materialFee: body.materialFee || 0,
-        platformFee: platformFee,
-        gstAmount: gstAmount,
-        paymentMethod: body.paymentMethod || 'UPI',
-        workerOtp: body.workerOtp || String(Math.floor(1000 + Math.random() * 9000)),
-        paymentTiming: body.paymentTiming || 'AFTER_SERVICE',
-        status: body.status || 'CONFIRMED',
-      },
+      data: bookingData,
       include: {
         customer: true,
         workerProfile: { include: { user: true } },

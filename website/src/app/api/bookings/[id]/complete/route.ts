@@ -6,13 +6,6 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    const { otp } = await request.json();
-    const cleanOtp = (otp || '').toString().trim();
-
-    if (!cleanOtp || cleanOtp.length !== 4) {
-      return NextResponse.json({ error: 'Please enter a valid 4-digit OTP' }, { status: 400 });
-    }
-
     const bookingId = params.id;
     let booking = null;
 
@@ -30,16 +23,7 @@ export async function POST(
         }
       });
     } catch (err) {
-      console.warn('DB booking find error in verify-otp:', err);
-    }
-
-    // Check OTP: strictly matches the booking's workerOtp from database
-    const expectedOtp = booking?.workerOtp;
-    if (!expectedOtp || cleanOtp !== expectedOtp) {
-      return NextResponse.json(
-        { error: 'Incorrect 4-digit OTP. Please ask customer to check their screen.' },
-        { status: 400 }
-      );
+      console.warn('DB find booking error in complete:', err);
     }
 
     let updated = null;
@@ -48,10 +32,9 @@ export async function POST(
         updated = await prisma.booking.update({
           where: { id: booking.id },
           data: {
-            status: 'IN_PROGRESS',
+            status: 'COMPLETED',
             trackingProgress: 100,
-            otpVerifiedAt: new Date(),
-            jobStartedAt: new Date(),
+            jobCompletedAt: new Date(),
           },
           include: {
             customer: true,
@@ -59,23 +42,22 @@ export async function POST(
           }
         });
       } catch (err) {
-        console.warn('Prisma booking update error:', err);
+        console.warn('Prisma booking update error in complete:', err);
       }
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Arrival OTP verified! Service job started.',
+      message: 'Job marked as COMPLETED! Ready for customer rating.',
       booking: updated || {
         id: bookingId,
-        status: 'IN_PROGRESS',
+        status: 'COMPLETED',
         trackingProgress: 100,
-        otpVerifiedAt: new Date().toISOString(),
-        jobStartedAt: new Date().toISOString(),
+        jobCompletedAt: new Date().toISOString()
       }
     });
   } catch (error: any) {
-    console.error('Verify booking OTP error:', error);
-    return NextResponse.json({ error: 'Failed to verify OTP' }, { status: 500 });
+    console.error('Complete booking error:', error);
+    return NextResponse.json({ error: 'Failed to complete booking' }, { status: 500 });
   }
 }

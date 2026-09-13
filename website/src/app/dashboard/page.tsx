@@ -43,9 +43,10 @@ export default function CustomerDashboardPage() {
         .catch(() => {});
 
       fetch('/api/bookings')
-        .then((res) => (res.ok ? res.json() : []))
+        .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
-          if (Array.isArray(data)) setBookings(data);
+          const list = data?.bookings || (Array.isArray(data) ? data : []);
+          setBookings(list);
           setLoading(false);
         })
         .catch(() => setLoading(false));

@@ -61,6 +61,17 @@ export default function PaymentPage() {
 
   const handleConfirmPayment = () => {
     setVerifying(true);
+    // API sync to update database payment status
+    fetch(`/api/bookings/${bookingId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        status: 'CONFIRMED',
+        paymentMethod: 'UPI',
+        paymentTiming: 'PRE_PAID'
+      })
+    }).catch(() => {});
+
     // Simulate webhook verification
     setTimeout(() => {
       setVerifying(false);
@@ -73,10 +84,31 @@ export default function PaymentPage() {
           if (raw) {
             const list = JSON.parse(raw);
             const updated = list.map((b: any) => 
-              b.id === bookingId ? { ...b, status: 'CONFIRMED', paymentStatus: 'PAID' } : b
+              b.id === bookingId ? { ...b, status: 'CONFIRMED', paymentStatus: 'PAID', paymentMethod: 'UPI' } : b
             );
             localStorage.setItem('sahyog-user-bookings', JSON.stringify(updated));
           }
+
+          // Broadcast payment confirmation to worker
+          try {
+            const channel = new BroadcastChannel('sahyog-realtime-sync');
+            channel.postMessage({
+              type: 'PAYMENT_RECEIVED',
+              bookingId,
+              amount: totalAmount,
+              method: 'UPI',
+              timestamp: Date.now()
+            });
+            channel.close();
+          } catch {}
+
+          localStorage.setItem('sahyog-realtime-event', JSON.stringify({
+            type: 'PAYMENT_RECEIVED',
+            bookingId,
+            amount: totalAmount,
+            method: 'UPI',
+            timestamp: Date.now()
+          }));
         } catch {}
       }
 

@@ -121,6 +121,10 @@ model Booking {
   totalAmount       Int      @default(0)
   paymentMethod     String   @default("UPI")
   workerOtp         String?
+  otpVerifiedAt     DateTime?
+  paymentTiming     String    @default("AFTER_SERVICE")
+  jobStartedAt      DateTime?
+  jobCompletedAt    DateTime?
   trackingProgress  Int      @default(0)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt

@@ -31,14 +31,21 @@ export default function TrackingPage() {
   const [paymentDone, setPaymentDone] = useState(false);
   const [paymentProcessing, setPaymentProcessing] = useState(false);
 
+  // Real-Time Feedback & Rating Modal State
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedbackRating, setFeedbackRating] = useState(5);
+  const [feedbackComment, setFeedbackComment] = useState('');
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+
   useEffect(() => {
-    // 1. Check local storage bookings
+    // 1. Initial check of local storage
     if (typeof window !== 'undefined') {
       try {
         const raw = localStorage.getItem('sahyog-user-bookings');
         if (raw) {
           const list = JSON.parse(raw);
-          const found = list.find((b: any) => b.id === bookingId);
+          const found = list.find((b: any) => b.id === bookingId || b.bookingCode === bookingId);
           if (found) {
             setBooking(found);
             if (found.status === 'IN_PROGRESS') setJobStage('IN_PROGRESS');
@@ -47,24 +54,108 @@ export default function TrackingPage() {
           }
         }
       } catch {}
+    }
 
-      // 2. Also query API
-      fetch('/api/bookings')
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          if (data?.bookings) {
+    // 2. Continuous 3-second database polling
+    const fetchBooking = async () => {
+      try {
+        const res = await fetch('/api/bookings');
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.bookings && Array.isArray(data.bookings)) {
             const found = data.bookings.find((b: any) => b.id === bookingId || b.bookingCode === bookingId);
             if (found) {
               setBooking(found);
-              if (found.status === 'IN_PROGRESS') setJobStage('IN_PROGRESS');
-              if (found.status === 'COMPLETED') setJobStage('COMPLETED');
+              if (found.status === 'IN_PROGRESS') {
+                setJobStage('IN_PROGRESS');
+              } else if (found.status === 'COMPLETED') {
+                setJobStage('COMPLETED');
+                if (typeof window !== 'undefined') {
+                  const alreadyRated = localStorage.getItem(`sahyog-rated-${found.id}`);
+                  if (!alreadyRated && !feedbackSubmitted) {
+                    setShowFeedbackModal(true);
+                  }
+                }
+              }
               if (found.paymentStatus === 'PAID') setPaymentDone(true);
+            } else if (typeof window !== 'undefined') {
+              // Auto-heal: If booking was created in localStorage but missed DB, auto-sync to DB
+              const raw = localStorage.getItem('sahyog-user-bookings');
+              if (raw) {
+                const list = JSON.parse(raw);
+                const local = list.find((b: any) => b.id === bookingId || b.bookingCode === bookingId);
+                if (local && !local._syncedToDb) {
+                  local._syncedToDb = true;
+                  localStorage.setItem('sahyog-user-bookings', JSON.stringify(list));
+                  fetch('/api/bookings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      id: local.id,
+                      bookingCode: local.bookingCode || local.serviceCode,
+                      workerProfileId: local.workerId,
+                      workerName: local.workerName,
+                      workerPhone: local.workerPhone,
+                      serviceTitle: local.serviceTitle || local.serviceName,
+                      scheduledDate: local.scheduledDate || 'Today',
+                      scheduledTime: local.scheduledTime || '10:00 AM',
+                      serviceLocation: local.address || local.serviceLocation,
+                      totalAmount: local.totalAmount || 625,
+                      workerOtp: local.workerOtp || '8008',
+                      paymentTiming: local.paymentTiming || 'AFTER_SERVICE',
+                      status: local.status || 'CONFIRMED'
+                    })
+                  }).catch(() => {});
+                }
+              }
             }
           }
-        })
-        .catch(() => {});
-    }
-  }, [bookingId]);
+        }
+      } catch {}
+    };
+
+    fetchBooking();
+    const interval = setInterval(fetchBooking, 3000);
+
+    // 3. Real-time Cross-tab broadcast receiver
+    const handleSync = (data: any) => {
+      if (!data) return;
+      if (data.type === 'JOB_STARTED' && (!data.bookingId || data.bookingId === bookingId)) {
+        setJobStage('IN_PROGRESS');
+      } else if (data.type === 'JOB_COMPLETED' && (!data.bookingId || data.bookingId === bookingId)) {
+        setJobStage('COMPLETED');
+        if (typeof window !== 'undefined') {
+          const alreadyRated = localStorage.getItem(`sahyog-rated-${bookingId}`);
+          if (!alreadyRated && !feedbackSubmitted) {
+            setShowFeedbackModal(true);
+          }
+        }
+      }
+    };
+
+    let channel: BroadcastChannel | null = null;
+    try {
+      channel = new BroadcastChannel('sahyog-realtime-sync');
+      channel.onmessage = (e) => {
+        if (e.data) handleSync(e.data);
+      };
+    } catch {}
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'sahyog-realtime-event' && e.newValue) {
+        try {
+          handleSync(JSON.parse(e.newValue));
+        } catch {}
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      clearInterval(interval);
+      if (channel) channel.close();
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, [bookingId, feedbackSubmitted]);
 
   // 5-Minute Timer countdown
   useEffect(() => {
@@ -75,8 +166,12 @@ export default function TrackingPage() {
     return () => clearInterval(t);
   }, [showPaymentModal, paymentTimer]);
 
-  const worker = allWorkers.find((w) => w.id === booking?.workerId) || allWorkers[0];
-  const workerOtp = booking?.workerOtp || '5821';
+  const worker = allWorkers.find((w) => 
+    w.id === booking?.workerId || 
+    w.name === booking?.workerName || 
+    w.name === booking?.workerProfile?.user?.fullName
+  ) || allWorkers[0];
+  const workerOtp = booking?.workerOtp || '8008';
   const totalAmount = booking?.totalAmount || 625;
   const isPayAfterService = booking?.paymentTiming === 'AFTER_SERVICE' || booking?.paymentStatus !== 'PAID';
 
@@ -134,6 +229,9 @@ export default function TrackingPage() {
 
   const handleSettlePayment = (method: 'UPI' | 'CASH') => {
     setPaymentProcessing(true);
+    // Mark completed in database
+    fetch(`/api/bookings/${bookingId}/complete`, { method: 'POST' }).catch(() => {});
+
     setTimeout(() => {
       setPaymentProcessing(false);
       setPaymentDone(true);
@@ -146,13 +244,46 @@ export default function TrackingPage() {
           if (raw) {
             const list = JSON.parse(raw);
             const updated = list.map((b: any) => 
-              b.id === bookingId ? { ...b, status: 'COMPLETED', paymentStatus: 'PAID', paymentMethod: method } : b
+              b.id === bookingId || b.bookingCode === bookingId 
+                ? { ...b, status: 'COMPLETED', paymentStatus: 'PAID', paymentMethod: method } 
+                : b
             );
             localStorage.setItem('sahyog-user-bookings', JSON.stringify(updated));
+          }
+
+          const alreadyRated = localStorage.getItem(`sahyog-rated-${bookingId}`);
+          if (!alreadyRated && !feedbackSubmitted) {
+            setShowFeedbackModal(true);
           }
         } catch {}
       }
     }, 1500);
+  };
+
+  const handleSubmitFeedback = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    setFeedbackSubmitting(true);
+    try {
+      await fetch('/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bookingId,
+          workerProfileId: booking?.workerProfileId || worker.id,
+          workerName: worker.name,
+          customerName: booking?.customer?.fullName || 'Verified Customer',
+          rating: feedbackRating,
+          comment: feedbackComment || 'Great service, highly satisfied!'
+        })
+      });
+    } catch {}
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(`sahyog-rated-${bookingId}`, 'true');
+    }
+    setFeedbackSubmitted(true);
+    setShowFeedbackModal(false);
+    setFeedbackSubmitting(false);
   };
 
   const getInitials = (name: string) => {
@@ -522,6 +653,93 @@ export default function TrackingPage() {
                 <span>Paid ₹{totalAmount} in Cash to Partner</span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Real-Time Customer Rating & Feedback Modal */}
+      {showFeedbackModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-slate-100 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-amber-500" />
+                <h3 className="font-black text-slate-900 text-base">Rate Your Service Partner</h3>
+              </div>
+              <button 
+                onClick={() => setShowFeedbackModal(false)}
+                className="p-1 text-slate-400 hover:text-slate-600 rounded-lg cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="text-center py-2 space-y-3">
+              <div className="w-16 h-16 rounded-2xl bg-teal-700 text-white font-black text-xl flex items-center justify-center mx-auto shadow-md">
+                {getInitials(worker.name)}
+              </div>
+              <div>
+                <h4 className="font-bold text-slate-900 text-base">{worker.name}</h4>
+                <p className="text-xs text-teal-700 font-semibold">{worker.title}</p>
+                <span className="text-[11px] text-slate-400">Job completed with SahYog Guarantee</span>
+              </div>
+
+              {/* 5-Star Rating Selector */}
+              <div className="flex items-center justify-center gap-2 pt-2">
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setFeedbackRating(s)}
+                    className="p-1 text-2xl transition hover:scale-125 focus:outline-none cursor-pointer"
+                  >
+                    <Star
+                      className={`w-7 h-7 ${
+                        s <= feedbackRating
+                          ? 'fill-amber-400 text-amber-400 drop-shadow-sm'
+                          : 'fill-slate-100 text-slate-300'
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs font-bold text-amber-700">
+                {feedbackRating === 5 ? '⭐ Excellent 5/5' : feedbackRating === 4 ? '👍 Very Good 4/5' : feedbackRating === 3 ? '👌 Good 3/5' : 'Fair'}
+              </p>
+            </div>
+
+            <form onSubmit={handleSubmitFeedback} className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1">
+                  Share Your Feedback (प्रतिक्रिया)
+                </label>
+                <textarea
+                  rows={3}
+                  value={feedbackComment}
+                  onChange={(e) => setFeedbackComment(e.target.value)}
+                  placeholder="E.g. Arrived on time, fixed the issue cleanly and professionally..."
+                  className="w-full text-xs p-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-teal-600 outline-none text-slate-900 resize-none"
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowFeedbackModal(false)}
+                  className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition cursor-pointer"
+                >
+                  Maybe Later
+                </button>
+                <button
+                  type="submit"
+                  disabled={feedbackSubmitting}
+                  className="flex-1 py-2.5 bg-teal-700 hover:bg-teal-800 disabled:opacity-50 text-white font-black text-xs rounded-xl shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  {feedbackSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                  <span>Submit Review</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

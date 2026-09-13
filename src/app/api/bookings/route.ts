@@ -127,33 +127,64 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unable to link customer or worker', success: false }, { status: 400 });
     }
 
-    const code = generateBookingCode();
+    // Safe date parsing to prevent "Invalid Date" Prisma errors
+    let scheduledDateObj = new Date(Date.now() + 86400000);
+    if (body.scheduledDate) {
+      if (typeof body.scheduledDate === 'string') {
+        const lower = body.scheduledDate.toLowerCase().trim();
+        if (lower.includes('today')) {
+          scheduledDateObj = new Date();
+        } else if (lower.includes('day after')) {
+          scheduledDateObj = new Date(Date.now() + 2 * 86400000);
+        } else if (lower.includes('tomorrow')) {
+          scheduledDateObj = new Date(Date.now() + 86400000);
+        } else {
+          const parsed = new Date(body.scheduledDate);
+          if (!isNaN(parsed.getTime())) {
+            scheduledDateObj = parsed;
+          }
+        }
+      } else {
+        const parsed = new Date(body.scheduledDate);
+        if (!isNaN(parsed.getTime())) {
+          scheduledDateObj = parsed;
+        }
+      }
+    }
+
+    const code = body.bookingCode || generateBookingCode();
     const serviceFee = body.serviceFee || Math.round((body.totalAmount || 500) * 0.8);
     const platformFee = body.platformFee || 25;
     const gstAmount = body.gstAmount || Math.round(serviceFee * 0.18);
     const totalAmount = body.totalAmount || (serviceFee + platformFee + gstAmount);
 
+    const bookingData: any = {
+      bookingCode: code,
+      customerId: customer.id,
+      workerProfileId: workerProfile.id,
+      serviceTitle: body.serviceTitle || body.serviceName || 'Home Service',
+      scheduledDate: scheduledDateObj,
+      scheduledTime: body.scheduledTime || body.time || '10:00 AM',
+      serviceLocation: body.serviceLocation || body.address || 'Ahmedabad, Gujarat',
+      city: body.city || 'Ahmedabad',
+      state: 'Gujarat',
+      totalAmount: totalAmount,
+      serviceFee: serviceFee,
+      materialFee: body.materialFee || 0,
+      platformFee: platformFee,
+      gstAmount: gstAmount,
+      paymentMethod: body.paymentMethod || 'UPI',
+      workerOtp: body.workerOtp || String(Math.floor(1000 + Math.random() * 9000)),
+      paymentTiming: body.paymentTiming || 'AFTER_SERVICE',
+      status: body.status || 'CONFIRMED',
+    };
+
+    if (body.id) {
+      bookingData.id = body.id;
+    }
+
     const booking = await prisma.booking.create({
-      data: {
-        bookingCode: code,
-        customerId: customer.id,
-        workerProfileId: workerProfile.id,
-        serviceTitle: body.serviceTitle || body.serviceName || 'Home Service',
-        scheduledDate: new Date(body.scheduledDate || Date.now() + 86400000),
-        scheduledTime: body.scheduledTime || body.time || '10:00 AM',
-        serviceLocation: body.serviceLocation || body.address || 'Ahmedabad, Gujarat',
-        city: body.city || 'Ahmedabad',
-        state: 'Gujarat',
-        totalAmount: totalAmount,
-        serviceFee: serviceFee,
-        materialFee: body.materialFee || 0,
-        platformFee: platformFee,
-        gstAmount: gstAmount,
-        paymentMethod: body.paymentMethod || 'UPI',
-        workerOtp: body.workerOtp || String(Math.floor(1000 + Math.random() * 9000)),
-        paymentTiming: body.paymentTiming || 'AFTER_SERVICE',
-        status: body.status || 'CONFIRMED',
-      },
+      data: bookingData,
       include: {
         customer: true,
         workerProfile: { include: { user: true } },
