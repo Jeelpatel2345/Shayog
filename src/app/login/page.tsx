@@ -26,27 +26,42 @@ export default function LoginPage() {
   // Auto-redirect if already logged in (critical for APK WebView experience)
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const storedRole = localStorage.getItem('sahyog-role');
-      const storedUserId = localStorage.getItem('sahyog-user-phone');
-      if (storedRole && storedUserId) {
-        // Already logged in — redirect to correct dashboard
-        if (storedRole === 'WORKER') {
-          router.replace('/worker/dashboard');
-        } else if (storedRole === 'ADMIN') {
-          router.replace('/admin/overview');
-        } else {
-          router.replace('/customer/dashboard');
-        }
-        return;
+      const urlParams = new URLSearchParams(window.location.search);
+      const requestedRole = urlParams.get('role')?.toUpperCase();
+      const isSwitch = urlParams.get('switch') === 'true';
+
+      if (requestedRole === 'WORKER') {
+        setSelectedRole('WORKER');
+        localStorage.setItem('sahyog-role', 'WORKER');
+      } else if (requestedRole === 'CUSTOMER') {
+        setSelectedRole('CUSTOMER');
+        localStorage.setItem('sahyog-role', 'CUSTOMER');
       }
-      // Not logged in — set default role
+
+      // Only auto-redirect if NOT switching accounts and NO explicit role was requested
+      if (!isSwitch && !requestedRole) {
+        const storedRole = localStorage.getItem('sahyog-role');
+        const storedUserId = localStorage.getItem('sahyog-user-phone');
+        if (storedRole && storedUserId) {
+          if (storedRole === 'WORKER') {
+            router.replace('/worker/dashboard');
+          } else if (storedRole === 'ADMIN') {
+            router.replace('/admin/overview');
+          } else {
+            router.replace('/customer/dashboard');
+          }
+          return;
+        }
+      }
+
+      const storedRole = localStorage.getItem('sahyog-role');
       if (storedRole === 'WORKER') {
         setSelectedRole('WORKER');
       } else {
         setSelectedRole('CUSTOMER');
       }
     }
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -138,9 +153,9 @@ export default function LoginPage() {
         throw new Error(data.error || 'Verification failed');
       }
 
-      // Store real user in auth state with their custom name
-      const userFullName = data.user.fullName || fullName.trim() || `User ${phone.slice(-4)}`;
-      const assignedRole = data.user.role || roleToSubmit;
+      // Ensure if user selected WORKER tab, role is strictly WORKER
+      const assignedRole = selectedRole === 'WORKER' ? 'WORKER' : (data.user.role || roleToSubmit);
+      const userFullName = fullName.trim() || data.user.fullName || (assignedRole === 'WORKER' ? 'Sunita Mehra' : `User ${phone.slice(-4)}`);
       
       setAuth({
         userId: data.user.id,
@@ -153,6 +168,7 @@ export default function LoginPage() {
       localStorage.setItem('sahyog-user-name', userFullName);
       localStorage.setItem('sahyog-user-phone', data.user.phone);
       localStorage.setItem('sahyog-role', assignedRole);
+      localStorage.setItem('sahyog-logged-in', 'true');
 
       if (assignedRole === 'ADMIN') {
         router.push('/admin/overview');

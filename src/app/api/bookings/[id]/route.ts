@@ -6,8 +6,13 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const booking = await prisma.booking.findUnique({
-      where: { id: params.id },
+    const booking = await prisma.booking.findFirst({
+      where: {
+        OR: [
+          { id: params.id },
+          { bookingCode: params.id }
+        ]
+      },
       include: {
         customer: true,
         workerProfile: { include: { user: true } },

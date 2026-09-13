@@ -33,13 +33,11 @@ export async function POST(
       console.warn('DB booking find error in verify-otp:', err);
     }
 
-    // Check OTP: matches stored OTP, or demo fallbacks
-    const expectedOtp = booking?.workerOtp || '3387';
-    const isOtpValid = cleanOtp === expectedOtp || cleanOtp === '3387' || cleanOtp === '5821' || cleanOtp === '1234';
-
-    if (!isOtpValid) {
+    // Check OTP: strictly matches the booking's workerOtp from database
+    const expectedOtp = booking?.workerOtp;
+    if (!expectedOtp || cleanOtp !== expectedOtp) {
       return NextResponse.json(
-        { error: 'Incorrect 4-digit OTP. Please ask customer to check their screen.' },
+        { error: 'Incorrect 4-digit OTP. Please ask the customer to check the exact OTP on their screen.' },
         { status: 400 }
       );
     }

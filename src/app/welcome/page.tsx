@@ -32,7 +32,7 @@ export default function WelcomePage() {
     localStorage.setItem('sahyog-role', role);
     localStorage.setItem('sahyog-service-scope', scope);
     localStorage.setItem('sahyog-lang', lang);
-    router.push('/login');
+    router.push(`/login?role=${role.toLowerCase()}`);
   };
 
   return (

@@ -121,6 +121,19 @@ export async function POST(request: NextRequest) {
           include: { customerProfile: true, workerProfile: true },
         });
       }
+
+      if (assignedRole === 'WORKER' && !user.workerProfile) {
+        await prisma.workerProfile.create({
+          data: {
+            userId: user.id,
+            primaryWorkArea: 'Ahmedabad',
+            hourlyRate: 350,
+            rating: 4.9,
+            yearsExperience: 5,
+            verificationStatus: 'APPROVED'
+          }
+        }).catch(() => null);
+      }
     } catch (upsertErr) {
       console.warn('DB user creation note:', upsertErr);
       if (!user) {

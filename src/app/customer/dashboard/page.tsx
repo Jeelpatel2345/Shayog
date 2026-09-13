@@ -37,6 +37,7 @@ export default function CustomerDashboard() {
   const [hasRated, setHasRated] = useState(false);
   const [liveJobStatus, setLiveJobStatus] = useState<'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED'>('CONFIRMED');
   const [realtimeToast, setRealtimeToast] = useState<string>('');
+  const [activeBookingId, setActiveBookingId] = useState<string>('1');
   const [ratedWorker, setRatedWorker] = useState({
     id: 'w-1',
     name: 'Amir Khan',
@@ -71,13 +72,15 @@ export default function CustomerDashboard() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Check existing stored job status
+    // Check existing stored job status and booking ID
     const storedStatus = localStorage.getItem('sahyog_active_job_status');
     if (storedStatus === 'IN_PROGRESS') {
       setLiveJobStatus('IN_PROGRESS');
     } else if (storedStatus === 'COMPLETED') {
       setLiveJobStatus('COMPLETED');
     }
+    const storedBkId = localStorage.getItem('sahyog-active-booking-id');
+    if (storedBkId) setActiveBookingId(storedBkId);
 
     const handleRealtimeMessage = (data: any) => {
       if (!data) return;
@@ -122,13 +125,22 @@ export default function CustomerDashboard() {
     };
     window.addEventListener('storage', handleStorage);
 
-    // 3. Periodic API polling fallback (every 3.5s for multi-device testing)
+    // 3. Periodic API polling fallback (every 3s for multi-device testing)
     const pollTimer = setInterval(() => {
       fetch('/api/bookings')
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
           if (data?.bookings && data.bookings.length > 0) {
             const b = data.bookings[0];
+            if (b.id) setActiveBookingId(b.id);
+            if (b.workerProfile?.user?.fullName || b.workerName) {
+              setRatedWorker(prev => ({
+                ...prev,
+                id: b.workerProfileId || prev.id,
+                name: b.workerProfile?.user?.fullName || b.workerName,
+                service: b.serviceTitle || prev.service,
+              }));
+            }
             if (b.status === 'IN_PROGRESS' && liveJobStatus !== 'IN_PROGRESS') {
               setLiveJobStatus('IN_PROGRESS');
             } else if (b.status === 'COMPLETED' && liveJobStatus !== 'COMPLETED') {
@@ -140,7 +152,7 @@ export default function CustomerDashboard() {
           }
         })
         .catch(() => {});
-    }, 3500);
+    }, 3000);
 
     return () => {
       if (channel) channel.close();
@@ -169,6 +181,7 @@ export default function CustomerDashboard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          bookingId: activeBookingId || undefined,
           workerProfileId: ratedWorker.id,
           workerName: ratedWorker.name,
           customerName: clientName || fullName || 'Customer',
@@ -291,6 +304,18 @@ export default function CustomerDashboard() {
 
           {/* User Profile Badge */}
           <div className="flex items-center gap-3">
+            <Link
+              href="/worker/dashboard"
+              onClick={() => {
+                if (typeof window !== 'undefined') localStorage.setItem('sahyog-role', 'WORKER');
+              }}
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-400 hover:bg-amber-300 text-emerald-950 font-bold text-xs rounded-full shadow-sm transition"
+              title="Switch to Worker Partner Mode"
+            >
+              <span>Worker Mode</span>
+              <span>🛠️</span>
+            </Link>
+
             <Link href="/notifications" className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition text-white relative" title="Notifications">
               <Bell className="w-4 h-4" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-amber-400 rounded-full" />
@@ -323,6 +348,16 @@ export default function CustomerDashboard() {
             </div>
 
             <div className="flex items-center gap-2">
+              <Link
+                href="/worker/dashboard"
+                onClick={() => {
+                  if (typeof window !== 'undefined') localStorage.setItem('sahyog-role', 'WORKER');
+                }}
+                className="px-2.5 py-1 bg-amber-400 text-emerald-950 font-bold text-[11px] rounded-full hover:bg-amber-300 transition flex items-center gap-1 shadow-sm"
+              >
+                <span>Worker</span>
+                <span>🛠️</span>
+              </Link>
               <Link href="/notifications" className="p-2 rounded-full bg-white/10 text-white relative" title="Notifications">
                 <Bell className="w-4 h-4" />
                 <span className="absolute top-1 right-1 w-2 h-2 bg-amber-400 rounded-full" />

@@ -10,11 +10,12 @@ import {
   Star, ThumbsUp, Sparkles
 } from 'lucide-react';
 import RealTrackingMap from '@/components/RealTrackingMap';
+import BottomNav from '@/components/BottomNav';
 
 export default function WorkerDashboard() {
   const router = useRouter();
   const [isOnline, setIsOnline] = useState(true);
-  const [workerName, setWorkerName] = useState('Sunita Mehra');
+  const [workerName, setWorkerName] = useState<string>('Sunita Mehra');
   const [showDirectionsModal, setShowDirectionsModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
@@ -23,9 +24,10 @@ export default function WorkerDashboard() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationSubmitted, setVerificationSubmitted] = useState(false);
 
-  // Active Job & Arrival 4-digit OTP state (defaults to live customer booking for Sunita Mehra)
+  // Active Job state - null when waiting for customer bookings, populated strictly for this worker
   const [activeBooking, setActiveBooking] = useState<{
     id: string;
+    bookingCode?: string;
     customerName: string;
     customerPhone: string;
     service: string;
@@ -33,151 +35,166 @@ export default function WorkerDashboard() {
     amount: number;
     otpVerified: boolean;
     expectedOtp?: string;
-  }>({
-    id: 'bk_mtu9jujcjz6p',
-    customerName: 'Jeel vyas',
-    customerPhone: '+91 91066 38851',
-    service: 'Home & Kitchen Cleaning Expert',
-    address: 'B/402, Shanti Heights, Sector 12, Ahmedabad',
-    amount: 731,
-    otpVerified: false,
-    expectedOtp: '3387',
-  });
+  } | null>(null);
+
   const [otpModalOpen, setOtpModalOpen] = useState(false);
   const [enteredOtp, setEnteredOtp] = useState('');
   const [otpError, setOtpError] = useState('');
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [toastNotice, setToastNotice] = useState('');
 
-  // Live Reviews & Customer Feedback for this Worker
-  const [workerReviews, setWorkerReviews] = useState<any[]>([
-    {
-      id: 'rev-def-1',
-      workerName: 'Amir Khan',
-      customerName: 'Priya Sharma',
-      rating: 5,
-      comment: 'Very polite and arrived on time. Completed the deep cleaning perfectly!',
-      tags: ['⏱️ On-Time Arrival', '🧹 Clean & Tidy', '🤝 Polite & Respectful'],
-      recommended: true,
-      timeAgo: 'Yesterday'
-    },
-    {
-      id: 'rev-def-2',
-      workerName: 'Amir Khan',
-      customerName: 'Rohan Mehta',
-      rating: 5,
-      comment: 'Expert workmanship, took extra care with fragile items. Highly satisfied.',
-      tags: ['🛠️ Expert Workmanship', '💰 Fair & Transparent Price'],
-      recommended: true,
-      timeAgo: '3 days ago'
-    }
-  ]);
+  // Live Reviews & Customer Feedback strictly for this Worker
+  const [workerReviews, setWorkerReviews] = useState<any[]>([]);
   const [liveRatingAverage, setLiveRatingAverage] = useState<number>(4.9);
-  const [liveReviewCount, setLiveReviewCount] = useState<number>(28);
+  const [liveReviewCount, setLiveReviewCount] = useState<number>(14);
   const [newReviewReceived, setNewReviewReceived] = useState<any | null>(null);
 
   // Lock Worker Role & Profile Hydration
+  // Lock Worker Role, Profile Hydration & Live 3-Second Cross-Device Polling
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('sahyog-role', 'WORKER');
       localStorage.setItem('sahyog-logged-in', 'true');
 
-      // 1. Check local storage bookings placed by customer
-      try {
-        const raw = localStorage.getItem('sahyog-user-bookings');
-        if (raw) {
-          const list = JSON.parse(raw);
-          if (Array.isArray(list) && list.length > 0) {
-            const latest = list[0];
-            const bWorker = latest.workerName || latest.workerProfile?.user?.fullName || 'Amir Khan';
-            setWorkerName(bWorker);
-            localStorage.setItem('sahyog-user-name', bWorker);
-            const isVerified = latest.status === 'IN_PROGRESS' || !!latest.otpVerifiedAt;
-            setActiveBooking({
-              id: latest.id || latest.bookingCode || 'bk_mtu9jujcjz6p',
-              customerName: latest.customerName || latest.customer?.fullName || 'Jeel vyas',
-              customerPhone: latest.customerPhone || '+91 91066 38851',
-              service: latest.serviceTitle || latest.serviceName || 'Home & Kitchen Cleaning Expert',
-              address: latest.address || latest.serviceLocation || 'B/402, Shanti Heights, Sector 12, Ahmedabad',
-              amount: latest.totalAmount || 731,
-              otpVerified: isVerified,
-              expectedOtp: latest.workerOtp || '3387',
-            });
-            setActiveJobStatus(isVerified ? 'IN PROGRESS' : 'ON THE WAY');
-          }
-        }
-      } catch {}
+      const currentWorkerName = localStorage.getItem('sahyog-user-name') || 'Sunita Mehra';
+      const currentWorkerPhone = localStorage.getItem('sahyog-user-phone') || '';
+      setWorkerName(currentWorkerName);
 
-      // 2. Load stored reviews for THIS worker
-      try {
-        const storedReviews = localStorage.getItem('sahyog-worker-reviews');
-        if (storedReviews) {
-          const list = JSON.parse(storedReviews);
-          // Filter strictly for THIS worker
-          const forMe = list.filter((r: any) => 
-            !r.workerName || r.workerName.toLowerCase().includes('amir') || r.workerName === workerName || workerName.includes('Amir')
-          );
-          if (forMe.length > 0) {
-            setWorkerReviews((prev) => {
-              const ids = new Set(forMe.map((m: any) => m.id || m.createdAt));
-              return [...forMe, ...prev.filter(p => !ids.has(p.id || p.createdAt))];
-            });
-            const avg = forMe.reduce((acc: number, r: any) => acc + (parseFloat(r.rating) || 5), 0) / forMe.length;
-            setLiveRatingAverage(Math.round(avg * 10) / 10);
-            setLiveReviewCount(28 + forMe.length);
-          }
-        }
-      } catch {}
-
-      // 3. Query API for live database bookings
-      fetch('/api/bookings')
-        .then((res) => (res.ok ? res.json() : null))
-        .then((data) => {
-          if (data?.bookings && data.bookings.length > 0) {
-            const active = data.bookings.find((b: any) => 
-              b.status === 'IN_PROGRESS' || b.status === 'CONFIRMED' || b.status === 'ACCEPTED' || b.status === 'PENDING'
-            );
-            if (active) {
-              const bWorker = active.workerProfile?.user?.fullName || active.workerName;
-              if (bWorker) {
-                setWorkerName(bWorker);
-                localStorage.setItem('sahyog-user-name', bWorker);
-              }
-              const isVerified = !!active.otpVerifiedAt || active.status === 'IN_PROGRESS';
-              setActiveBooking({
-                id: active.id,
-                customerName: active.customer?.fullName || 'Jeel vyas',
-                customerPhone: active.customer?.phone || '+91 91066 38851',
-                service: active.serviceTitle || active.serviceName || 'Home & Kitchen Cleaning Expert',
-                address: active.serviceLocation || 'B/402, Shanti Heights, Sector 12, Ahmedabad',
-                amount: active.totalAmount || 731,
-                otpVerified: isVerified,
-                expectedOtp: active.workerOtp || '3387',
+      // 1. Fetch live database bookings strictly for THIS worker
+      const pollBookings = async () => {
+        try {
+          const nameParam = currentWorkerName ? `?workerName=${encodeURIComponent(currentWorkerName)}` : '';
+          const res = await fetch(`/api/bookings${nameParam}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data?.bookings && Array.isArray(data.bookings)) {
+              // Find active booking strictly matching this worker
+              const active = data.bookings.find((b: any) => {
+                const bWorkerName = b.workerProfile?.user?.fullName || b.workerName;
+                const bWorkerPhone = b.workerProfile?.user?.phone || b.workerPhone;
+                const matchesName = bWorkerName && currentWorkerName && (
+                  bWorkerName.toLowerCase().includes(currentWorkerName.toLowerCase()) ||
+                  currentWorkerName.toLowerCase().includes(bWorkerName.toLowerCase())
+                );
+                const matchesPhone = bWorkerPhone && currentWorkerPhone && (
+                  bWorkerPhone.replace(/\D/g, '').includes(currentWorkerPhone.replace(/\D/g, '').slice(-10))
+                );
+                const isMine = matchesName || matchesPhone || !currentWorkerName;
+                return isMine && (b.status === 'CONFIRMED' || b.status === 'IN_PROGRESS' || b.status === 'ACCEPTED' || b.status === 'PENDING');
               });
-              setActiveJobStatus(isVerified ? 'IN PROGRESS' : 'ON THE WAY');
+
+              if (active) {
+                const isVerified = active.status === 'IN_PROGRESS' || !!active.otpVerifiedAt;
+                setActiveBooking({
+                  id: active.id,
+                  bookingCode: active.bookingCode,
+                  customerName: active.customer?.fullName || active.customerName || 'Verified Customer',
+                  customerPhone: active.customer?.phone || active.customerPhone || '+919876543210',
+                  service: active.serviceTitle || 'Home Service Specialist',
+                  address: active.serviceLocation || 'Ahmedabad, Gujarat',
+                  amount: active.totalAmount || 500,
+                  otpVerified: isVerified,
+                  expectedOtp: active.workerOtp,
+                });
+                setActiveJobStatus(isVerified ? 'IN PROGRESS' : 'ON THE WAY');
+              } else {
+                // Check if completed
+                const completed = data.bookings.find((b: any) => {
+                  const bWorkerName = b.workerProfile?.user?.fullName || b.workerName;
+                  const matchesName = bWorkerName && currentWorkerName && (
+                    bWorkerName.toLowerCase().includes(currentWorkerName.toLowerCase()) ||
+                    currentWorkerName.toLowerCase().includes(bWorkerName.toLowerCase())
+                  );
+                  return matchesName && b.status === 'COMPLETED';
+                });
+                if (completed && activeJobStatus === 'IN PROGRESS') {
+                  setActiveJobStatus('COMPLETED');
+                } else if (!active) {
+                  setActiveBooking(null);
+                }
+              }
             }
           }
-        })
-        .catch(() => {});
+        } catch (err) {
+          console.warn('Booking poll error:', err);
+        }
+      };
 
-      // 4. Real-time sync listener for live customer reviews
-      const handleRealtimeReview = (data: any) => {
+      // 2. Fetch live reviews strictly for THIS worker
+      const pollReviews = async () => {
+        try {
+          const nameParam = currentWorkerName ? `?workerName=${encodeURIComponent(currentWorkerName)}` : '';
+          const res = await fetch(`/api/reviews${nameParam}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data?.reviews && Array.isArray(data.reviews)) {
+              const myRevs = data.reviews.filter((r: any) => {
+                const rWorker = r.workerName || r.workerProfile?.user?.fullName;
+                return !rWorker || (currentWorkerName && (
+                  rWorker.toLowerCase().includes(currentWorkerName.toLowerCase()) ||
+                  currentWorkerName.toLowerCase().includes(rWorker.toLowerCase())
+                ));
+              });
+
+              if (myRevs.length > 0) {
+                setWorkerReviews(myRevs);
+                const avg = myRevs.reduce((acc: number, r: any) => acc + (parseFloat(r.rating) || 5), 0) / myRevs.length;
+                setLiveRatingAverage(Math.round(avg * 10) / 10);
+                setLiveReviewCount(myRevs.length);
+              }
+            }
+          }
+        } catch (err) {
+          console.warn('Review poll error:', err);
+        }
+      };
+
+      pollBookings();
+      pollReviews();
+
+      const bookingInterval = setInterval(pollBookings, 3000);
+      const reviewInterval = setInterval(pollReviews, 4000);
+
+      // 3. Real-time sync listener for live customer reviews & new bookings
+      const handleRealtimeMessage = (data: any) => {
         if (data?.type === 'REVIEW_SUBMITTED' && data.review) {
           const r = data.review;
-          // Verify review is for this worker
-          const isForMe = !r.workerName || 
-            r.workerName.toLowerCase().includes('amir') || 
-            r.workerName === workerName || 
-            workerName.toLowerCase().includes('amir');
+          const rWorker = r.workerName;
+          const isForMe = !rWorker || (currentWorkerName && (
+            rWorker.toLowerCase().includes(currentWorkerName.toLowerCase()) ||
+            currentWorkerName.toLowerCase().includes(rWorker.toLowerCase())
+          ));
 
           if (isForMe) {
             const newRev = { ...r, timeAgo: 'Just now' };
             setWorkerReviews((prev) => [newRev, ...prev.filter(p => p.id !== r.id)]);
             setNewReviewReceived(newRev);
             setLiveReviewCount(prev => prev + 1);
-            setLiveRatingAverage(prev => Math.min(5.0, Math.round(((prev * 28 + (r.rating || 5)) / 29) * 10) / 10));
             setToastNotice(`🎉 New ${r.rating}-Star Review Received from ${r.customerName || 'Customer'}!`);
             setTimeout(() => setToastNotice(''), 7000);
+          }
+        } else if (data?.type === 'NEW_BOOKING' && data.booking) {
+          const b = data.booking;
+          const bWorker = b.workerName || b.workerProfile?.user?.fullName;
+          const isForMe = !bWorker || (currentWorkerName && (
+            bWorker.toLowerCase().includes(currentWorkerName.toLowerCase()) ||
+            currentWorkerName.toLowerCase().includes(bWorker.toLowerCase())
+          ));
+          if (isForMe) {
+            setActiveBooking({
+              id: b.id,
+              bookingCode: b.bookingCode,
+              customerName: b.customerName || 'Customer',
+              customerPhone: b.customerPhone || '+919876543210',
+              service: b.serviceTitle || 'Home Service',
+              address: b.serviceLocation || 'Ahmedabad, Gujarat',
+              amount: b.totalAmount || 500,
+              otpVerified: false,
+              expectedOtp: b.workerOtp,
+            });
+            setActiveJobStatus('ON THE WAY');
+            setToastNotice(`🔔 New Booking Received from ${b.customerName || 'Customer'}!`);
+            setTimeout(() => setToastNotice(''), 6000);
           }
         }
       };
@@ -187,7 +204,7 @@ export default function WorkerDashboard() {
       try {
         channel = new BroadcastChannel('sahyog-realtime-sync');
         channel.onmessage = (e) => {
-          if (e.data) handleRealtimeReview(e.data);
+          if (e.data) handleRealtimeMessage(e.data);
         };
       } catch {}
 
@@ -195,19 +212,20 @@ export default function WorkerDashboard() {
       const handleStorage = (e: StorageEvent) => {
         if (e.key === 'sahyog-realtime-event' && e.newValue) {
           try {
-            const parsed = JSON.parse(e.newValue);
-            handleRealtimeReview(parsed);
+            handleRealtimeMessage(JSON.parse(e.newValue));
           } catch {}
         }
       };
       window.addEventListener('storage', handleStorage);
 
       return () => {
+        clearInterval(bookingInterval);
+        clearInterval(reviewInterval);
         if (channel) channel.close();
         window.removeEventListener('storage', handleStorage);
       };
     }
-  }, [router, workerName]);
+  }, []);
 
   const getInitials = (name: string) => {
     const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -242,6 +260,10 @@ export default function WorkerDashboard() {
       setOtpError('Please enter the full 4-digit code provided by customer');
       return;
     }
+    if (!activeBooking?.id) {
+      setOtpError('No active booking found to verify');
+      return;
+    }
     setOtpError('');
     setVerifyingOtp(true);
 
@@ -257,7 +279,7 @@ export default function WorkerDashboard() {
       }
 
       setActiveJobStatus('IN PROGRESS');
-      setActiveBooking((prev) => ({ ...prev, otpVerified: true }));
+      setActiveBooking((prev) => prev ? ({ ...prev, otpVerified: true }) : null);
       setOtpModalOpen(false);
       setEnteredOtp('');
       setToastNotice('✅ 4-Digit OTP Verified! Work is now IN PROGRESS.');
@@ -275,81 +297,25 @@ export default function WorkerDashboard() {
         channel.close();
       } catch {}
 
-      // Sync with customer tracking screen in localStorage
       if (typeof window !== 'undefined') {
-        try {
-          localStorage.setItem('sahyog_active_job_status', 'IN_PROGRESS');
-          localStorage.setItem('sahyog-realtime-event', JSON.stringify({
-            type: 'JOB_STARTED',
-            bookingId: activeBooking.id,
-            workerName,
-            timestamp: Date.now()
-          }));
-
-          const raw = localStorage.getItem('sahyog-user-bookings');
-          if (raw) {
-            const list = JSON.parse(raw);
-            const updatedList = list.map((b: any) =>
-              b.id === activeBooking.id || b.bookingCode === activeBooking.id
-                ? { ...b, status: 'IN_PROGRESS', otpVerifiedAt: new Date().toISOString() }
-                : b
-            );
-            localStorage.setItem('sahyog-user-bookings', JSON.stringify(updatedList));
-          }
-        } catch {}
+        localStorage.setItem('sahyog_active_job_status', 'IN_PROGRESS');
+        localStorage.setItem('sahyog-realtime-event', JSON.stringify({
+          type: 'JOB_STARTED',
+          bookingId: activeBooking.id,
+          workerName,
+          timestamp: Date.now()
+        }));
       }
     } catch (err: any) {
-      // In demo mode or if mock booking, accept 4-digit code smoothly
-      if (enteredOtp.length === 4) {
-        setActiveJobStatus('IN PROGRESS');
-        setActiveBooking((prev) => ({ ...prev, otpVerified: true }));
-        setOtpModalOpen(false);
-        setEnteredOtp('');
-        setToastNotice('✅ 4-Digit OTP Verified! Work is now IN PROGRESS.');
-        setTimeout(() => setToastNotice(''), 4000);
-
-        try {
-          const channel = new BroadcastChannel('sahyog-realtime-sync');
-          channel.postMessage({
-            type: 'JOB_STARTED',
-            bookingId: activeBooking.id,
-            workerName,
-            timestamp: Date.now()
-          });
-          channel.close();
-        } catch {}
-
-        if (typeof window !== 'undefined') {
-          try {
-            localStorage.setItem('sahyog_active_job_status', 'IN_PROGRESS');
-            localStorage.setItem('sahyog-realtime-event', JSON.stringify({
-              type: 'JOB_STARTED',
-              bookingId: activeBooking.id,
-              workerName,
-              timestamp: Date.now()
-            }));
-
-            const raw = localStorage.getItem('sahyog-user-bookings');
-            if (raw) {
-              const list = JSON.parse(raw);
-              const updatedList = list.map((b: any) =>
-                b.id === activeBooking.id || b.bookingCode === activeBooking.id
-                  ? { ...b, status: 'IN_PROGRESS', otpVerifiedAt: new Date().toISOString() }
-                  : b
-              );
-              localStorage.setItem('sahyog-user-bookings', JSON.stringify(updatedList));
-            }
-          } catch {}
-        }
-      } else {
-        setOtpError(err.message || 'Incorrect 4-digit customer code');
-      }
+      // STRICT OTP CHECK: Never accept random numbers on error!
+      setOtpError(err.message || 'Incorrect 4-digit OTP. Please ask customer to check their screen.');
     } finally {
       setVerifyingOtp(false);
     }
   };
 
   const handleCompleteJob = async () => {
+    if (!activeBooking?.id) return;
     try {
       await fetch(`/api/bookings/${activeBooking.id}/complete`, { method: 'POST' }).catch(() => {});
     } catch (_) {}
@@ -357,13 +323,13 @@ export default function WorkerDashboard() {
     setToastNotice(`🎉 Job Completed! ₹${activeBooking.amount} added to your account.`);
     setTimeout(() => setToastNotice(''), 5000);
 
-    // Broadcast real-time event to Customer Dashboard to DIRECTLY POP UP FEEDBACK FORM
+    // Broadcast real-time event to Customer Dashboard to auto-open feedback
     try {
       const channel = new BroadcastChannel('sahyog-realtime-sync');
       channel.postMessage({
         type: 'JOB_COMPLETED',
         bookingId: activeBooking.id,
-        workerName: workerName || 'Amir Khan',
+        workerName: workerName || 'Worker Partner',
         service: activeBooking.service,
         timestamp: Date.now()
       });
@@ -376,7 +342,7 @@ export default function WorkerDashboard() {
         localStorage.setItem('sahyog-realtime-event', JSON.stringify({
           type: 'JOB_COMPLETED',
           bookingId: activeBooking.id,
-          workerName: workerName || 'Amir Khan',
+          workerName: workerName || 'Worker Partner',
           service: activeBooking.service,
           timestamp: Date.now()
         }));
@@ -398,7 +364,7 @@ export default function WorkerDashboard() {
   return (
     <div className="min-h-screen bg-slate-100/70 pb-28 text-slate-900">
       {/* Container to maintain max width on mobile while looking elegant on desktop */}
-      <div className="max-w-xl mx-auto min-h-screen bg-white shadow-xl shadow-slate-200/50 flex flex-col">
+      <div className="max-w-md mx-auto min-h-screen bg-white shadow-xl shadow-slate-200/50 flex flex-col">
         
         {/* Top Header Bar */}
         <header className="bg-white px-5 py-4 flex items-center justify-between border-b border-slate-100 sticky top-0 z-30 shadow-xs">
@@ -423,7 +389,19 @@ export default function WorkerDashboard() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2">
+            <Link
+              href="/customer/dashboard"
+              onClick={() => {
+                if (typeof window !== 'undefined') localStorage.setItem('sahyog-role', 'CUSTOMER');
+              }}
+              className="px-2.5 py-1 bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 transition rounded-full text-xs font-bold flex items-center gap-1 shadow-2xs"
+              title="Switch to Customer Mode"
+            >
+              <span>Customer</span>
+              <span>👤</span>
+            </Link>
+
             <Link 
               href="/notifications" 
               className="p-2 rounded-full hover:bg-slate-100 text-slate-600 transition relative"
@@ -561,113 +539,135 @@ export default function WorkerDashboard() {
             </div>
           </div>
 
-          {/* Active Job Card */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
-                <Clock className="w-4 h-4 text-teal-700" />
-                Active Job
-              </h3>
-              <span className="text-[11px] font-bold border border-teal-600 bg-teal-50 text-teal-800 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                {activeJobStatus}
-              </span>
-            </div>
+          {/* Active Job Card or Waiting State */}
+          {activeBooking ? (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+                  <Clock className="w-4 h-4 text-teal-700" />
+                  Active Assignment
+                </h3>
+                <span className="text-[11px] font-bold border border-teal-600 bg-teal-50 text-teal-800 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                  {activeJobStatus}
+                </span>
+              </div>
 
-            <div className="bg-white rounded-2xl p-4 border-2 border-teal-100 shadow-sm relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-24 h-24 bg-teal-50 rounded-full -mr-10 -mt-10 pointer-events-none" />
+              <div className="bg-white rounded-2xl p-4 border-2 border-teal-100 shadow-sm relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-teal-50 rounded-full -mr-10 -mt-10 pointer-events-none" />
 
-              <div className="flex items-start justify-between relative z-10">
-                <div>
-                  <span className="text-teal-700 font-black text-base tracking-tight block">
-                    {activeBooking.service}
-                  </span>
-                  <p className="font-bold text-slate-800 text-sm mt-0.5">
-                    {activeBooking.customerName}
+                <div className="flex items-start justify-between relative z-10">
+                  <div>
+                    <span className="text-teal-700 font-black text-base tracking-tight block">
+                      {activeBooking.service}
+                    </span>
+                    <p className="font-bold text-slate-800 text-sm mt-0.5">
+                      {activeBooking.customerName}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-black text-xl text-slate-900 leading-none">₹ {activeBooking.amount}</p>
+                    <p className="text-[11px] text-slate-400 font-medium mt-0.5">Fixed Fee</p>
+                  </div>
+                </div>
+
+                <div className="mt-3 space-y-1.5 text-xs text-slate-600">
+                  <p className="flex items-center gap-2">
+                    <MapPin className="w-3.5 h-3.5 text-teal-700 flex-shrink-0" />
+                    <span className="font-medium text-slate-800">{activeBooking.address}</span>
+                    <span className="text-[11px] text-slate-400">• 2.4 km away</span>
+                  </p>
+                  <p className="flex items-center gap-2">
+                    <Calendar className="w-3.5 h-3.5 text-teal-700 flex-shrink-0" />
+                    <span>Scheduled: <b>Today (Active)</b></span>
                   </p>
                 </div>
-                <div className="text-right">
-                  <p className="font-black text-xl text-slate-900 leading-none">₹ {activeBooking.amount}</p>
-                  <p className="text-[11px] text-slate-400 font-medium mt-0.5">Fixed Fee</p>
+
+                {/* Action Buttons */}
+                <div className="flex items-center gap-2.5 mt-4 pt-3 border-t border-slate-100">
+                  <button 
+                    type="button"
+                    onClick={() => setShowDirectionsModal(true)}
+                    className="flex-1 bg-teal-700 hover:bg-teal-800 text-white py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition active:scale-98"
+                  >
+                    <Navigation className="w-4 h-4" />
+                    <span>Open Directions</span>
+                  </button>
+
+                  <button 
+                    type="button"
+                    onClick={() => setShowContactModal(true)}
+                    className="p-2.5 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center justify-center transition"
+                    title="Contact Customer"
+                  >
+                    <Phone className="w-4 h-4 text-teal-700" />
+                  </button>
+
+                  <Link
+                    href="/chat/1?role=worker"
+                    className="p-2.5 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center justify-center transition relative"
+                    title="Chat with Customer"
+                  >
+                    <MessageSquare className="w-4 h-4 text-teal-700" />
+                    <span className="w-2 h-2 bg-amber-500 rounded-full absolute top-1 right-1" />
+                  </Link>
+                </div>
+
+                {/* 4-Digit Arrival OTP & Job Completion Trigger */}
+                <div className="mt-3">
+                  {activeJobStatus !== 'COMPLETED' ? (
+                    !activeBooking.otpVerified && activeJobStatus !== 'IN PROGRESS' ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOtpModalOpen(true);
+                          setEnteredOtp('');
+                          setOtpError('');
+                        }}
+                        className="w-full py-2.5 px-3 bg-amber-400 hover:bg-amber-500 text-slate-950 font-black text-xs rounded-xl transition flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-98"
+                      >
+                        <KeyRound className="w-4 h-4 text-slate-950" />
+                        <span>Arrived? Enter Customer 4-Digit OTP</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleCompleteJob}
+                        className="w-full py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl transition flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-98"
+                      >
+                        <CheckCircle2 className="w-4 h-4 text-white" />
+                        <span>Complete Job & Collect ₹{activeBooking.amount}</span>
+                      </button>
+                    )
+                  ) : (
+                    <div className="w-full py-2.5 bg-emerald-50 text-emerald-800 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 border border-emerald-200">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      <span>Job Completed & Payment Credited (₹{activeBooking.amount})</span>
+                    </div>
+                  )}
                 </div>
               </div>
-
-              <div className="mt-3 space-y-1.5 text-xs text-slate-600">
-                <p className="flex items-center gap-2">
-                  <MapPin className="w-3.5 h-3.5 text-teal-700 flex-shrink-0" />
-                  <span className="font-medium text-slate-800">{activeBooking.address}</span>
-                  <span className="text-[11px] text-slate-400">• 2.4 km away</span>
-                </p>
-                <p className="flex items-center gap-2">
-                  <Calendar className="w-3.5 h-3.5 text-teal-700 flex-shrink-0" />
-                  <span>Today: <b>10:30 AM - 12:30 PM</b></span>
+            </div>
+          ) : (
+            <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs text-center space-y-3">
+              <div className="w-12 h-12 bg-teal-50 text-teal-700 rounded-full flex items-center justify-center mx-auto relative">
+                <Zap className="w-6 h-6 text-amber-500 animate-pulse" />
+                <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-emerald-500 rounded-full border-2 border-white animate-ping" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 text-sm">Online • Ready for Customer Bookings</h3>
+                <p className="text-xs text-slate-500 max-w-xs mx-auto mt-1 leading-relaxed">
+                  No active assignments right now. When a customer books your service, it will appear here in real time with the 4-digit arrival OTP!
                 </p>
               </div>
-
-              {/* Action Buttons */}
-              <div className="flex items-center gap-2.5 mt-4 pt-3 border-t border-slate-100">
-                <button 
-                  type="button"
-                  onClick={() => setShowDirectionsModal(true)}
-                  className="flex-1 bg-teal-700 hover:bg-teal-800 text-white py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition active:scale-98"
-                >
-                  <Navigation className="w-4 h-4" />
-                  <span>Open Directions</span>
-                </button>
-
-                <button 
-                  type="button"
-                  onClick={() => setShowContactModal(true)}
-                  className="p-2.5 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center justify-center transition"
-                  title="Contact Customer"
-                >
-                  <Phone className="w-4 h-4 text-teal-700" />
-                </button>
-
-                <Link
-                  href="/chat/1?role=worker"
-                  className="p-2.5 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center justify-center transition relative"
-                  title="Chat with Customer"
-                >
-                  <MessageSquare className="w-4 h-4 text-teal-700" />
-                  <span className="w-2 h-2 bg-amber-500 rounded-full absolute top-1 right-1" />
-                </Link>
-              </div>
-
-              {/* 4-Digit Arrival OTP & Job Completion Trigger */}
-              <div className="mt-3">
-                {activeJobStatus !== 'COMPLETED' ? (
-                  !activeBooking.otpVerified && activeJobStatus !== 'IN PROGRESS' ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setOtpModalOpen(true);
-                        setEnteredOtp('');
-                        setOtpError('');
-                      }}
-                      className="w-full py-2.5 px-3 bg-amber-400 hover:bg-amber-500 text-slate-950 font-black text-xs rounded-xl transition flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-98"
-                    >
-                      <KeyRound className="w-4 h-4 text-slate-950" />
-                      <span>Arrived? Enter Customer 4-Digit OTP</span>
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={handleCompleteJob}
-                      className="w-full py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl transition flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-98"
-                    >
-                      <CheckCircle2 className="w-4 h-4 text-white" />
-                      <span>Complete Job & Collect ₹{activeBooking.amount}</span>
-                    </button>
-                  )
-                ) : (
-                  <div className="w-full py-2.5 bg-emerald-50 text-emerald-800 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 border border-emerald-200">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                    <span>Job Completed & Payment Credited (₹{activeBooking.amount})</span>
-                  </div>
-                )}
+              <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between text-xs">
+                <span className="text-slate-500">Live Status Radar:</span>
+                <span className="text-emerald-700 font-bold flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  Listening for bookings
+                </span>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Upcoming Bookings Section */}
           <div className="space-y-2.5">
@@ -849,7 +849,7 @@ export default function WorkerDashboard() {
                           </span>
                         </div>
                         <p className="text-[10px] text-slate-400">
-                          {rev.timeAgo || 'Just now'} • {rev.service || activeBooking.service}
+                          {rev.timeAgo || 'Just now'} • {rev.service || activeBooking?.service || 'Home Service'}
                         </p>
                       </div>
                     </div>
@@ -1122,21 +1122,21 @@ export default function WorkerDashboard() {
 
             <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-2xl border border-slate-100">
               <div className="w-10 h-10 rounded-full bg-teal-100 text-teal-800 font-bold flex items-center justify-center">
-                AS
+                {activeBooking?.customerName ? activeBooking.customerName.slice(0, 2).toUpperCase() : 'CU'}
               </div>
               <div>
-                <p className="font-bold text-slate-900 text-sm">Amit Sharma</p>
-                <p className="text-xs text-slate-500">Sector 45, Gurgaon</p>
+                <p className="font-bold text-slate-900 text-sm">{activeBooking?.customerName || 'Customer'}</p>
+                <p className="text-xs text-slate-500">{activeBooking?.address || 'Ahmedabad, Gujarat'}</p>
               </div>
             </div>
 
             <div className="space-y-2">
               <a 
-                href="tel:+919876543210"
+                href={`tel:${activeBooking?.customerPhone || '+919876543210'}`}
                 className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 shadow-xs transition"
               >
                 <Phone className="w-4 h-4" />
-                Call Customer (+91 98765 43210)
+                Call Customer ({activeBooking?.customerPhone || '+91 98765 43210'})
               </a>
 
               <Link
@@ -1178,13 +1178,13 @@ export default function WorkerDashboard() {
             </div>
 
             <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs space-y-1">
-              <p className="font-bold text-slate-800">{activeBooking.customerName}</p>
-              <p className="text-slate-500">{activeBooking.service}</p>
-              <p className="text-slate-400 text-[11px]">{activeBooking.address}</p>
+              <p className="font-bold text-slate-800">{activeBooking?.customerName || 'Customer'}</p>
+              <p className="text-slate-500">{activeBooking?.service || 'Service'}</p>
+              <p className="text-slate-400 text-[11px]">{activeBooking?.address || 'Location'}</p>
             </div>
 
             <p className="text-xs text-slate-500 leading-relaxed">
-              Ask {activeBooking.customerName} for the <b>4-digit code</b> shown on their SahYog tracking screen to unlock the job.
+              Ask {activeBooking?.customerName || 'the customer'} for the <b>4-digit code</b> shown on their SahYog tracking screen to unlock the job.
             </p>
 
             {otpError && (
@@ -1219,6 +1219,8 @@ export default function WorkerDashboard() {
         </div>
       )}
 
+      {/* Mobile Bottom Navigation Bar */}
+      <BottomNav role="worker" />
     </div>
   );
 }

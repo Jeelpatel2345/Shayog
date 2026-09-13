@@ -12,7 +12,7 @@ import BottomNav from '@/components/BottomNav';
 import RealTrackingMap from '@/components/RealTrackingMap';
 import WorkerChatDrawer from '@/components/WorkerChatDrawer';
 
-export default function JobTrackingPage() {
+export default function JobTrackingPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const [isCancelled, setIsCancelled] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -20,15 +20,46 @@ export default function JobTrackingPage() {
   const [isChatDrawerOpen, setIsChatDrawerOpen] = useState(false);
   const [liveJobStatus, setLiveJobStatus] = useState<'ARRIVING' | 'IN_PROGRESS' | 'COMPLETED'>('ARRIVING');
   const [liveToast, setLiveToast] = useState('');
-  const otpDigits = ['5', '8', '2', '1'];
+  const [bookingData, setBookingData] = useState<any>(null);
+  const [otpDigits, setOtpDigits] = useState<string[]>(['5', '8', '2', '1']);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+
+    // Check stored OTP fallback
+    const storedOtp = localStorage.getItem('sahyog-active-booking-otp');
+    if (storedOtp && storedOtp.length === 4) {
+      setOtpDigits(storedOtp.split(''));
+    }
 
     // Check stored status
     const storedStatus = localStorage.getItem('sahyog_active_job_status');
     if (storedStatus === 'IN_PROGRESS') setLiveJobStatus('IN_PROGRESS');
     if (storedStatus === 'COMPLETED') setLiveJobStatus('COMPLETED');
+
+    const fetchBooking = async () => {
+      try {
+        const lookupId = (params?.id && params.id !== '1') ? params.id : (localStorage.getItem('sahyog-active-booking-id') || params?.id || '1');
+        const res = await fetch(`/api/bookings/${lookupId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.booking) {
+            setBookingData(data.booking);
+            if (data.booking.workerOtp) {
+              setOtpDigits(data.booking.workerOtp.split(''));
+            }
+            if (data.booking.status === 'IN_PROGRESS') {
+              setLiveJobStatus('IN_PROGRESS');
+            } else if (data.booking.status === 'COMPLETED') {
+              setLiveJobStatus('COMPLETED');
+            }
+          }
+        }
+      } catch {}
+    };
+
+    fetchBooking();
+    const pollInterval = setInterval(fetchBooking, 3000);
 
     const handleSync = (data: any) => {
       if (!data) return;
@@ -63,15 +94,23 @@ export default function JobTrackingPage() {
     window.addEventListener('storage', handleStorage);
 
     return () => {
+      clearInterval(pollInterval);
       channel?.close();
       window.removeEventListener('storage', handleStorage);
     };
-  }, [router]);
+  }, [params?.id, router]);
 
   const handleConfirmCancel = () => {
     setIsCancelled(true);
     setShowCancelModal(false);
   };
+
+  const currentWorkerName = bookingData?.workerProfile?.user?.fullName || bookingData?.workerName || 'Rajesh Kumar';
+  const currentWorkerPhone = bookingData?.workerProfile?.user?.phone || bookingData?.workerPhone || '+919825101001';
+  const currentServiceTitle = bookingData?.serviceTitle || 'Home Service';
+  const currentServiceLocation = bookingData?.serviceLocation || 'B/402, Shanti Heights, Navrangpura, Ahmedabad';
+  const currentBookingCode = bookingData?.bookingCode || '#SY-9842';
+  const currentTotalAmount = bookingData?.totalAmount || 450;
 
   return (
     <div className="max-w-md mx-auto min-h-screen bg-slate-50 pb-32 text-slate-900">
@@ -190,12 +229,12 @@ export default function JobTrackingPage() {
                   <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border border-white" />
                 </div>
                 <div>
-                  <p className="font-bold text-sm">Rajesh Kumar</p>
-                  <p className="text-xs text-gray-500">Master Plumber • ⭐4.8 (124 jobs)</p>
+                  <p className="font-bold text-sm">{currentWorkerName}</p>
+                  <p className="text-xs text-gray-500">{currentServiceTitle} • ⭐4.9 (Verified Pro)</p>
                 </div>
               </div>
               <div className="flex gap-2">
-                <a href="tel:+919123456789" className="w-10 h-10 border rounded-xl flex items-center justify-center hover:bg-gray-50" title="Call Worker">
+                <a href={`tel:${currentWorkerPhone}`} className="w-10 h-10 border rounded-xl flex items-center justify-center hover:bg-gray-50" title="Call Worker">
                   <Phone className="w-4 h-4 text-teal-600" />
                 </a>
                 <button 
@@ -220,7 +259,7 @@ export default function JobTrackingPage() {
                 className="inline-flex items-center justify-center gap-2 w-full py-3 bg-white text-teal-800 font-bold rounded-xl text-sm shadow-md hover:bg-teal-50 transition"
               >
                 <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-                <span>Rate & Review Rajesh Now</span>
+                <span>Rate & Review {currentWorkerName} Now</span>
               </Link>
             </div>
           ) : liveJobStatus === 'IN_PROGRESS' ? (
@@ -229,7 +268,7 @@ export default function JobTrackingPage() {
                 <CheckCircle className="w-3.5 h-3.5 text-white" /> OTP Verified Successfully
               </div>
               <p className="text-sm font-semibold">Service job is active and ongoing</p>
-              <p className="text-xs text-emerald-100 mt-1">Once completed, you can provide ratings & review for Rajesh.</p>
+              <p className="text-xs text-emerald-100 mt-1">Once completed, you can provide ratings & review for {currentWorkerName}.</p>
             </div>
           ) : (
             <div className="mx-4 mt-4 bg-teal-600 rounded-xl p-4 text-center text-white shadow-sm">
@@ -251,23 +290,23 @@ export default function JobTrackingPage() {
           <div className="px-4 mt-4">
             <div className="flex items-center justify-between mb-2">
               <h3 className="font-bold text-sm">Job Details</h3>
-              <span className="text-teal-600 text-xs font-semibold">Service Code: #SY-9842</span>
+              <span className="text-teal-600 text-xs font-semibold">Service Code: {currentBookingCode}</span>
             </div>
             <div className="bg-white rounded-xl p-4 border shadow-xs space-y-3">
               <div className="flex items-start gap-3">
                 <MapPin className="w-5 h-5 text-teal-600 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="font-semibold text-sm">Kitchen Sink Leak Repair</p>
-                  <p className="text-xs text-gray-500">Sector 14, Huda City, Gurgaon</p>
+                  <p className="font-semibold text-sm">{currentServiceTitle}</p>
+                  <p className="text-xs text-gray-500">{currentServiceLocation}</p>
                 </div>
               </div>
               <div className="flex items-center justify-between pt-2 border-t text-sm">
                 <p className="text-xs text-gray-500 flex items-center gap-1">
-                  <Info className="w-3.5 h-3.5" /> Emergency repair
+                  <Info className="w-3.5 h-3.5" /> Direct Service Booking
                 </p>
                 <div className="text-right">
                   <p className="text-[10px] text-gray-400">Total Price</p>
-                  <p className="font-bold text-base text-gray-900">₹ 450.00</p>
+                  <p className="font-bold text-base text-gray-900">₹ {currentTotalAmount}.00</p>
                 </div>
               </div>
             </div>

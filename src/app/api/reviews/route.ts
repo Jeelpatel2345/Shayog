@@ -4,7 +4,7 @@ import prisma from '@/lib/prisma';
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const workerId = searchParams.get('workerId') || searchParams.get('workerProfileId');
+    const workerId = searchParams.get('workerId') || searchParams.get('workerProfileId') || searchParams.get('workerName');
 
     let reviews: any[] = [];
     if (workerId) {
@@ -13,7 +13,8 @@ export async function GET(request: NextRequest) {
           where: {
             OR: [
               { workerProfileId: workerId },
-              { workerProfile: { user: { fullName: { contains: workerId, mode: 'insensitive' } } } }
+              { workerProfile: { user: { fullName: { contains: workerId, mode: 'insensitive' } } } },
+              { workerProfile: { user: { phone: { contains: workerId.replace(/\D/g, '').slice(-10) } } } }
             ]
           },
           include: {
@@ -26,6 +27,18 @@ export async function GET(request: NextRequest) {
       } catch (dbErr) {
         console.warn('DB reviews findMany error:', dbErr);
       }
+    } else {
+      try {
+        reviews = await prisma.review.findMany({
+          include: {
+            customer: { select: { fullName: true, phone: true } },
+            booking: { select: { serviceTitle: true, scheduledDate: true } },
+            workerProfile: { include: { user: { select: { fullName: true } } } }
+          },
+          orderBy: { createdAt: 'desc' },
+          take: 20
+        });
+      } catch {}
     }
 
     return NextResponse.json({ success: true, reviews });
@@ -54,13 +67,41 @@ export async function POST(request: NextRequest) {
 
     let savedReview = null;
     try {
-      // Attempt database save if IDs match real records
-      if (bookingId && customerId && workerProfileId) {
+      let wpId = workerProfileId;
+      if (!wpId && workerName) {
+        const wp = await prisma.workerProfile.findFirst({
+          where: { user: { fullName: { contains: workerName, mode: 'insensitive' } } }
+        });
+        wpId = wp?.id;
+      }
+
+      let bkId = bookingId;
+      let cId = customerId;
+      if (bkId) {
+        const bk = await prisma.booking.findFirst({
+          where: { OR: [{ id: bkId }, { bookingCode: bkId }] }
+        });
+        if (bk) {
+          bkId = bk.id;
+          if (!cId) cId = bk.customerId;
+          if (!wpId) wpId = bk.workerProfileId;
+        }
+      }
+      if (!cId) {
+        const cust = await prisma.user.findFirst({ where: { role: 'CUSTOMER' } });
+        cId = cust?.id;
+      }
+      if (!wpId) {
+        const wpFirst = await prisma.workerProfile.findFirst();
+        wpId = wpFirst?.id;
+      }
+
+      if (bkId && cId && wpId) {
         savedReview = await prisma.review.create({
           data: {
-            bookingId,
-            customerId,
-            workerProfileId,
+            bookingId: bkId,
+            customerId: cId,
+            workerProfileId: wpId,
             rating: numRating,
             comment: comment || 'Excellent and trustworthy service.',
           },

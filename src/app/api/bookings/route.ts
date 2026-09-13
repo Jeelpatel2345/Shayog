@@ -7,10 +7,26 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const customerId = searchParams.get('customerId');
     const workerProfileId = searchParams.get('workerProfileId');
+    const workerName = searchParams.get('workerName');
+    const workerPhone = searchParams.get('workerPhone');
 
     const where: Record<string, unknown> = {};
     if (customerId) where.customerId = customerId;
     if (workerProfileId) where.workerProfileId = workerProfileId;
+    if (workerName && workerName.trim()) {
+      where.workerProfile = {
+        user: {
+          fullName: { contains: workerName.trim(), mode: 'insensitive' }
+        }
+      };
+    } else if (workerPhone && workerPhone.trim()) {
+      const cleanP = workerPhone.replace(/\D/g, '').slice(-10);
+      where.workerProfile = {
+        user: {
+          phone: { contains: cleanP }
+        }
+      };
+    }
 
     const bookings = await prisma.booking.findMany({
       where,
@@ -65,6 +81,13 @@ export async function POST(request: NextRequest) {
       }).catch(() => null);
     }
     const targetWorkerName = (body.workerName || 'Sunita Mehra').trim();
+    if (!workerProfile && body.workerPhone) {
+      const cleanWP = body.workerPhone.replace(/\D/g, '').slice(-10);
+      workerProfile = await prisma.workerProfile.findFirst({
+        where: { user: { phone: { contains: cleanWP } } },
+        include: { user: true }
+      }).catch(() => null);
+    }
     if (!workerProfile && targetWorkerName) {
       workerProfile = await prisma.workerProfile.findFirst({
         where: { user: { fullName: { contains: targetWorkerName, mode: 'insensitive' } } },
@@ -74,9 +97,12 @@ export async function POST(request: NextRequest) {
     if (!workerProfile) {
       // Create dedicated worker profile matching targetWorkerName
       const randDigits = Math.floor(1000000000 + Math.random() * 9000000000).toString();
+      const workerPhone = body.workerPhone 
+        ? (body.workerPhone.startsWith('+91') ? body.workerPhone : `+91${body.workerPhone.replace(/\D/g, '').slice(-10)}`)
+        : `+91${randDigits}`;
       const workerUser = await prisma.user.create({
         data: {
-          phone: `+91${randDigits}`,
+          phone: workerPhone,
           fullName: targetWorkerName,
           role: 'WORKER',
           workerProfile: {
