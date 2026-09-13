@@ -1,10 +1,11 @@
 'use client';
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { 
   ArrowLeft, Bell, CheckCircle, Phone, MessageSquare, MapPin, 
-  ShieldCheck, Info, User, XCircle, AlertTriangle 
+  ShieldCheck, Info, User, XCircle, AlertTriangle, Sparkles, Star
 } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
 
@@ -17,7 +18,55 @@ export default function JobTrackingPage() {
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('Change of plans');
   const [isChatDrawerOpen, setIsChatDrawerOpen] = useState(false);
+  const [liveJobStatus, setLiveJobStatus] = useState<'ARRIVING' | 'IN_PROGRESS' | 'COMPLETED'>('ARRIVING');
+  const [liveToast, setLiveToast] = useState('');
   const otpDigits = ['5', '8', '2', '1'];
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // Check stored status
+    const storedStatus = localStorage.getItem('sahyog_active_job_status');
+    if (storedStatus === 'IN_PROGRESS') setLiveJobStatus('IN_PROGRESS');
+    if (storedStatus === 'COMPLETED') setLiveJobStatus('COMPLETED');
+
+    const handleSync = (data: any) => {
+      if (!data) return;
+      if (data.type === 'JOB_STARTED') {
+        setLiveJobStatus('IN_PROGRESS');
+        setLiveToast('⚡ OTP Verified! Partner has started working.');
+        setTimeout(() => setLiveToast(''), 5000);
+      } else if (data.type === 'JOB_COMPLETED') {
+        setLiveJobStatus('COMPLETED');
+        setLiveToast('🎉 Service Completed! Redirecting to Partner Review...');
+        setTimeout(() => {
+          router.push('/customer/dashboard');
+        }, 2500);
+      }
+    };
+
+    let channel: BroadcastChannel | null = null;
+    try {
+      channel = new BroadcastChannel('sahyog-realtime-sync');
+      channel.onmessage = (e) => {
+        if (e.data) handleSync(e.data);
+      };
+    } catch {}
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'sahyog-realtime-event' && e.newValue) {
+        try {
+          handleSync(JSON.parse(e.newValue));
+        } catch {}
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      channel?.close();
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, [router]);
 
   const handleConfirmCancel = () => {
     setIsCancelled(true);
@@ -73,22 +122,61 @@ export default function JobTrackingPage() {
             initialDistanceKm={2.4}
           />
 
+          {/* Live Notification Banner */}
+          {liveToast && (
+            <div className="mx-4 mt-3 p-3 bg-emerald-600 text-white rounded-xl shadow-lg flex items-center gap-2 text-xs font-semibold animate-bounce z-30">
+              <Sparkles className="w-4 h-4 text-yellow-300 flex-shrink-0" />
+              <span>{liveToast}</span>
+            </div>
+          )}
+
           {/* Status Card */}
           <div className="px-4 -mt-4 relative z-10">
             <div className="bg-white rounded-xl shadow-md p-4 border">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <CheckCircle className="w-5 h-5 text-teal-600" />
-                  <span className="font-bold text-sm">Worker is on the way</span>
+                  <CheckCircle className={`w-5 h-5 ${liveJobStatus === 'COMPLETED' ? 'text-blue-600' : liveJobStatus === 'IN_PROGRESS' ? 'text-emerald-600' : 'text-teal-600'}`} />
+                  <span className="font-bold text-sm">
+                    {liveJobStatus === 'COMPLETED' 
+                      ? 'Job Completed!' 
+                      : liveJobStatus === 'IN_PROGRESS' 
+                        ? '⚡ Service In Progress' 
+                        : 'Worker is on the way'}
+                  </span>
                 </div>
-                <span className="text-xs bg-teal-50 text-teal-700 px-2 py-0.5 rounded-full font-bold">HEADING</span>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+                  liveJobStatus === 'COMPLETED'
+                    ? 'bg-blue-50 text-blue-700'
+                    : liveJobStatus === 'IN_PROGRESS'
+                      ? 'bg-emerald-100 text-emerald-800 animate-pulse'
+                      : 'bg-teal-50 text-teal-700'
+                }`}>
+                  {liveJobStatus === 'COMPLETED' ? 'DONE' : liveJobStatus === 'IN_PROGRESS' ? 'ACTIVE' : 'HEADING'}
+                </span>
               </div>
-              <p className="text-sm text-gray-500 ml-7">3.4 km away • ~12 mins arrival</p>
+              <p className="text-sm text-gray-500 ml-7">
+                {liveJobStatus === 'COMPLETED'
+                  ? 'Work finished. Please rate your experience.'
+                  : liveJobStatus === 'IN_PROGRESS'
+                    ? 'Partner is currently working at your location.'
+                    : '3.4 km away • ~12 mins arrival'}
+              </p>
               <div className="mt-3 flex items-center gap-2">
-                <div className="flex-1 bg-gray-100 rounded-full h-2">
-                  <div className="bg-teal-600 h-2 rounded-full" style={{ width: '65%' }} />
+                <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
+                  <div 
+                    className={`h-2 rounded-full transition-all duration-500 ${
+                      liveJobStatus === 'COMPLETED' 
+                        ? 'bg-blue-600' 
+                        : liveJobStatus === 'IN_PROGRESS' 
+                          ? 'bg-emerald-500' 
+                          : 'bg-teal-600'
+                    }`} 
+                    style={{ width: liveJobStatus === 'COMPLETED' ? '100%' : liveJobStatus === 'IN_PROGRESS' ? '100%' : '65%' }} 
+                  />
                 </div>
-                <span className="text-xs font-semibold text-gray-600">65%</span>
+                <span className="text-xs font-semibold text-gray-600">
+                  {liveJobStatus === 'COMPLETED' || liveJobStatus === 'IN_PROGRESS' ? '100%' : '65%'}
+                </span>
               </div>
             </div>
           </div>
@@ -121,20 +209,43 @@ export default function JobTrackingPage() {
             </div>
           </div>
 
-          {/* OTP Section */}
-          <div className="mx-4 mt-4 bg-teal-600 rounded-xl p-4 text-center text-white shadow-sm">
-            <p className="text-xs tracking-widest text-teal-200 font-semibold mb-2">SHARE THIS OTP UPON ARRIVAL</p>
-            <div className="flex justify-center gap-2 mb-2">
-              {otpDigits.map((d, i) => (
-                <div key={i} className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl font-bold ${i % 2 === 0 ? 'bg-white text-teal-700' : 'bg-teal-500 text-white'}`}>
-                  {d}
-                </div>
-              ))}
+          {/* OTP Section or Completion Rating Prompt */}
+          {liveJobStatus === 'COMPLETED' ? (
+            <div className="mx-4 mt-4 bg-linear-to-r from-teal-700 to-emerald-700 rounded-xl p-5 text-center text-white shadow-md">
+              <Sparkles className="w-8 h-8 mx-auto text-yellow-300 mb-1" />
+              <h3 className="font-bold text-base">Service Completed Successfully!</h3>
+              <p className="text-xs text-teal-100 mt-1 mb-3">Your feedback helps partners maintain top service quality.</p>
+              <Link
+                href="/customer/dashboard"
+                className="inline-flex items-center justify-center gap-2 w-full py-3 bg-white text-teal-800 font-bold rounded-xl text-sm shadow-md hover:bg-teal-50 transition"
+              >
+                <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                <span>Rate & Review Rajesh Now</span>
+              </Link>
             </div>
-            <p className="text-xs text-teal-200 flex items-center justify-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5" /> SahYog Safety Guard enabled
-            </p>
-          </div>
+          ) : liveJobStatus === 'IN_PROGRESS' ? (
+            <div className="mx-4 mt-4 bg-emerald-600 rounded-xl p-4 text-center text-white shadow-sm">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-700/80 rounded-full text-xs font-bold text-emerald-100 mb-2">
+                <CheckCircle className="w-3.5 h-3.5 text-white" /> OTP Verified Successfully
+              </div>
+              <p className="text-sm font-semibold">Service job is active and ongoing</p>
+              <p className="text-xs text-emerald-100 mt-1">Once completed, you can provide ratings & review for Rajesh.</p>
+            </div>
+          ) : (
+            <div className="mx-4 mt-4 bg-teal-600 rounded-xl p-4 text-center text-white shadow-sm">
+              <p className="text-xs tracking-widest text-teal-200 font-semibold mb-2">SHARE THIS OTP UPON ARRIVAL</p>
+              <div className="flex justify-center gap-2 mb-2">
+                {otpDigits.map((d, i) => (
+                  <div key={i} className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl font-bold ${i % 2 === 0 ? 'bg-white text-teal-700' : 'bg-teal-500 text-white'}`}>
+                    {d}
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-teal-200 flex items-center justify-center gap-1">
+                <ShieldCheck className="w-3.5 h-3.5" /> SahYog Safety Guard enabled
+              </p>
+            </div>
+          )}
 
           {/* Job Details */}
           <div className="px-4 mt-4">

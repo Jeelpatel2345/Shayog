@@ -30,13 +30,15 @@ export default function CustomerDashboard() {
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const [selectedRating, setSelectedRating] = useState(5);
   const [hoverRating, setHoverRating] = useState(0);
-  const [selectedTags, setSelectedTags] = useState<string[]>(['On-Time Arrival', 'Expert Workmanship']);
+  const [selectedTags, setSelectedTags] = useState<string[]>(['⏱️ On-Time Arrival', '🛠️ Expert Workmanship']);
   const [feedbackText, setFeedbackText] = useState('');
   const [recommended, setRecommended] = useState(true);
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
   const [hasRated, setHasRated] = useState(false);
-  const [ratedWorker] = useState({
-    id: 1,
+  const [liveJobStatus, setLiveJobStatus] = useState<'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED'>('CONFIRMED');
+  const [realtimeToast, setRealtimeToast] = useState<string>('');
+  const [ratedWorker, setRatedWorker] = useState({
+    id: 'w-1',
     name: 'Amir Khan',
     service: 'Deep Home Cleaning Specialist',
     completedDate: 'Completed Today, 2:30 PM'
@@ -65,23 +67,149 @@ export default function CustomerDashboard() {
     );
   };
 
-  const handleRatingSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (typeof window !== 'undefined') {
-      const reviewObj = {
-        workerId: ratedWorker.id,
-        workerName: ratedWorker.name,
-        service: ratedWorker.service,
-        rating: selectedRating,
-        tags: selectedTags,
-        feedback: feedbackText.trim() || 'Excellent service and courteous behavior.',
-        recommended,
-        createdAt: new Date().toISOString()
-      };
-      const existing = JSON.parse(localStorage.getItem('sahyog-customer-reviews') || '[]');
-      existing.unshift(reviewObj);
-      localStorage.setItem('sahyog-customer-reviews', JSON.stringify(existing));
+  // Real-time synchronization with Worker Dashboard
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // Check existing stored job status
+    const storedStatus = localStorage.getItem('sahyog_active_job_status');
+    if (storedStatus === 'IN_PROGRESS') {
+      setLiveJobStatus('IN_PROGRESS');
+    } else if (storedStatus === 'COMPLETED') {
+      setLiveJobStatus('COMPLETED');
     }
+
+    const handleRealtimeMessage = (data: any) => {
+      if (!data) return;
+      if (data.type === 'JOB_STARTED') {
+        setLiveJobStatus('IN_PROGRESS');
+        setRealtimeToast('⚡ Partner Arrived! Service job is now IN PROGRESS.');
+        setTimeout(() => setRealtimeToast(''), 5000);
+      } else if (data.type === 'JOB_COMPLETED') {
+        setLiveJobStatus('COMPLETED');
+        if (data.workerName) {
+          setRatedWorker(prev => ({
+            ...prev,
+            name: data.workerName,
+            service: data.service || prev.service,
+            completedDate: 'Completed Just Now'
+          }));
+        }
+        // Direct automatic popup of feedback on customer screen!
+        setIsFeedbackOpen(true);
+        setRealtimeToast('🎉 Service Completed! Please share your rating.');
+        setTimeout(() => setRealtimeToast(''), 6000);
+      }
+    };
+
+    // 1. BroadcastChannel for instant 0ms cross-tab sync
+    let channel: BroadcastChannel | null = null;
+    try {
+      channel = new BroadcastChannel('sahyog-realtime-sync');
+      channel.onmessage = (e) => {
+        if (e.data) handleRealtimeMessage(e.data);
+      };
+    } catch {}
+
+    // 2. Storage event listener for cross-window sync
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'sahyog-realtime-event' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          handleRealtimeMessage(parsed);
+        } catch {}
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    // 3. Periodic API polling fallback (every 3.5s for multi-device testing)
+    const pollTimer = setInterval(() => {
+      fetch('/api/bookings')
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data?.bookings && data.bookings.length > 0) {
+            const b = data.bookings[0];
+            if (b.status === 'IN_PROGRESS' && liveJobStatus !== 'IN_PROGRESS') {
+              setLiveJobStatus('IN_PROGRESS');
+            } else if (b.status === 'COMPLETED' && liveJobStatus !== 'COMPLETED') {
+              setLiveJobStatus('COMPLETED');
+              if (!hasRated && !isFeedbackOpen) {
+                setIsFeedbackOpen(true);
+              }
+            }
+          }
+        })
+        .catch(() => {});
+    }, 3500);
+
+    return () => {
+      if (channel) channel.close();
+      window.removeEventListener('storage', handleStorage);
+      clearInterval(pollTimer);
+    };
+  }, [hasRated, isFeedbackOpen, liveJobStatus]);
+
+  const handleRatingSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const reviewObj = {
+      workerId: ratedWorker.id,
+      workerName: ratedWorker.name,
+      customerName: clientName || fullName || 'Customer',
+      service: ratedWorker.service,
+      rating: selectedRating,
+      tags: selectedTags,
+      feedback: feedbackText.trim() || 'Excellent service, punctual, and very professional.',
+      recommended,
+      createdAt: new Date().toISOString()
+    };
+
+    // 1. Save to Database API
+    try {
+      fetch('/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workerProfileId: ratedWorker.id,
+          workerName: ratedWorker.name,
+          customerName: clientName || fullName || 'Customer',
+          rating: selectedRating,
+          comment: feedbackText.trim() || 'Excellent service, punctual, and very professional.',
+          tags: selectedTags,
+          recommended
+        })
+      }).catch(() => {});
+    } catch {}
+
+    // 2. Store in localStorage for instant retrieval by worker dashboard
+    if (typeof window !== 'undefined') {
+      const existingWorkerReviews = JSON.parse(localStorage.getItem('sahyog-worker-reviews') || '[]');
+      existingWorkerReviews.unshift(reviewObj);
+      localStorage.setItem('sahyog-worker-reviews', JSON.stringify(existingWorkerReviews));
+
+      const existingCustomerReviews = JSON.parse(localStorage.getItem('sahyog-customer-reviews') || '[]');
+      existingCustomerReviews.unshift(reviewObj);
+      localStorage.setItem('sahyog-customer-reviews', JSON.stringify(existingCustomerReviews));
+
+      // 3. Broadcast event to Worker Dashboard in real time!
+      try {
+        const channel = new BroadcastChannel('sahyog-realtime-sync');
+        channel.postMessage({
+          type: 'REVIEW_SUBMITTED',
+          review: reviewObj,
+          workerName: ratedWorker.name,
+          timestamp: Date.now()
+        });
+        channel.close();
+      } catch {}
+
+      localStorage.setItem('sahyog-realtime-event', JSON.stringify({
+        type: 'REVIEW_SUBMITTED',
+        review: reviewObj,
+        workerName: ratedWorker.name,
+        timestamp: Date.now()
+      }));
+    }
+
     setFeedbackSubmitted(true);
     setHasRated(true);
     setTimeout(() => {
@@ -343,9 +471,21 @@ export default function CustomerDashboard() {
                     </p>
                   </div>
                 </div>
-                <span className="text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full">
-                  Confirmed
-                </span>
+                {liveJobStatus === 'IN_PROGRESS' ? (
+                  <span className="text-[10px] font-black bg-amber-500 text-white px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-xs animate-pulse">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                    In Progress
+                  </span>
+                ) : liveJobStatus === 'COMPLETED' ? (
+                  <span className="text-[10px] font-black bg-emerald-600 text-white px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-xs">
+                    <CheckCircle2 className="w-3 h-3 text-white" />
+                    Completed
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full">
+                    Confirmed
+                  </span>
+                )}
               </div>
 
               <div className="bg-slate-50 rounded-xl p-2.5 flex items-center justify-between text-xs">
@@ -354,15 +494,17 @@ export default function CustomerDashboard() {
                     AK
                   </div>
                   <div>
-                    <p className="font-bold text-slate-800">Amir Khan</p>
-                    <p className="text-[10px] text-slate-400">Verified Specialist • ★ 4.9</p>
+                    <p className="font-bold text-slate-800">{ratedWorker.name}</p>
+                    <p className="text-[10px] text-slate-400">
+                      {liveJobStatus === 'IN_PROGRESS' ? '⚡ Currently Working at Location' : liveJobStatus === 'COMPLETED' ? 'Job Completed • Rate Partner Below' : 'Verified Specialist • ★ 4.9'}
+                    </p>
                   </div>
                 </div>
                 <Link
                   href="/customer/tracking/1"
                   className="bg-teal-600 hover:bg-teal-700 text-white font-bold text-[11px] px-3 py-1.5 rounded-lg transition"
                 >
-                  Track Partner
+                  {liveJobStatus === 'IN_PROGRESS' ? 'View Live Job' : 'Track Partner'}
                 </Link>
               </div>
             </div>
@@ -385,7 +527,7 @@ export default function CustomerDashboard() {
                         </span>
                       )}
                     </div>
-                    <h4 className="font-bold text-sm text-slate-900 mt-1">Deep Home Cleaning</h4>
+                    <h4 className="font-bold text-sm text-slate-900 mt-1">{ratedWorker.service}</h4>
                     <p className="text-[11px] text-slate-500">{ratedWorker.completedDate}</p>
                   </div>
                 </div>
@@ -497,11 +639,19 @@ export default function CustomerDashboard() {
         </div>
       </div>
 
+      {/* Real-time sync floating notification */}
+      {realtimeToast && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[110] bg-emerald-800 text-white font-bold text-xs px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 border border-emerald-500/40 animate-in fade-in slide-in-from-top-4 max-w-sm text-center">
+          <Sparkles className="w-4 h-4 text-amber-400 flex-shrink-0 animate-spin" />
+          <span>{realtimeToast}</span>
+        </div>
+      )}
+
       {/* Worker Feedback & Rating Popup Modal */}
       {isFeedbackOpen && (
         <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200 overflow-y-auto">
-          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200 flex flex-col max-h-[84vh] sm:max-h-[88vh] my-auto">
-            {/* Modal Header */}
+          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh] sm:max-h-[88vh] my-auto">
+            {/* Modal Header (Fixed at top) */}
             <div className="bg-gradient-to-r from-[#042f2e] via-[#0d9488] to-[#042f2e] text-white p-4 sm:p-5 relative flex-shrink-0">
               <button
                 type="button"
@@ -512,7 +662,7 @@ export default function CustomerDashboard() {
               </button>
 
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-amber-400 text-emerald-950 font-black text-lg flex items-center justify-center shadow-md">
+                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-amber-400 text-emerald-950 font-black text-lg flex items-center justify-center shadow-md flex-shrink-0">
                   AK
                 </div>
                 <div>
@@ -544,7 +694,7 @@ export default function CustomerDashboard() {
                   </div>
                 </div>
               ) : (
-                <form onSubmit={handleRatingSubmit} className="space-y-4">
+                <form id="feedback-rating-form" onSubmit={handleRatingSubmit} className="space-y-4">
                   {/* Star Rating Section */}
                   <div className="text-center py-2 bg-slate-50/80 rounded-2xl border border-slate-100 p-4">
                     <label className="block text-xs font-black uppercase tracking-wider text-slate-500 mb-2">
@@ -653,20 +803,23 @@ export default function CustomerDashboard() {
                       </button>
                     </div>
                   </div>
-
-                  {/* Submit Button with generous bottom padding and high visibility */}
-                  <div className="pt-2 pb-6">
-                    <button
-                      type="submit"
-                      className="w-full bg-teal-700 hover:bg-teal-800 active:scale-[0.98] text-white font-black py-4 rounded-2xl shadow-lg shadow-teal-900/25 transition text-sm flex items-center justify-center gap-2 cursor-pointer border border-teal-600/30"
-                    >
-                      <Star className="w-4 h-4 fill-white" />
-                      <span>Submit Worker Rating & Review</span>
-                    </button>
-                  </div>
                 </form>
               )}
             </div>
+
+            {/* Pinned Modal Footer - ALWAYS visible, never cut off on any device */}
+            {!feedbackSubmitted && (
+              <div className="p-3.5 sm:p-4 bg-white/95 backdrop-blur-md border-t border-slate-100 flex-shrink-0">
+                <button
+                  type="submit"
+                  form="feedback-rating-form"
+                  className="w-full bg-teal-700 hover:bg-teal-800 active:scale-[0.98] text-white font-black py-3.5 sm:py-4 rounded-2xl shadow-lg shadow-teal-900/25 transition text-sm flex items-center justify-center gap-2 cursor-pointer border border-teal-600/30"
+                >
+                  <Star className="w-4 h-4 fill-white" />
+                  <span>Submit Worker Rating & Review</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
