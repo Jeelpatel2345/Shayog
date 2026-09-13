@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { 
   ArrowLeft, Bell, Calendar, MapPin, Clock, AlertTriangle, 
   CheckCircle2, XCircle, ChevronRight, ShieldCheck, User, 
-  RotateCcw, Sparkles, Wrench, Zap, Search, Filter, Phone, MessageSquare
+  RotateCcw, Sparkles, Wrench, Zap, Search, Filter, Phone, MessageSquare, Star
 } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
 import WorkerChatDrawer from '@/components/WorkerChatDrawer';
@@ -188,8 +188,8 @@ export default function BookingsListPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {/* Cancel Button on Active Bookings */}
-                  {(isInProgress || isConfirmed) && (
+                  {/* Cancel Button only allowed BEFORE work begins (CONFIRMED) */}
+                  {isConfirmed && (
                     <button
                       onClick={() => setCancellingBooking(b)}
                       className="px-3 py-1.5 border border-red-200 text-red-600 hover:bg-red-50 text-xs font-bold rounded-xl transition flex items-center gap-1"
@@ -225,6 +225,14 @@ export default function BookingsListPage() {
 
                   {b.status === 'COMPLETED' && (
                     <div className="flex items-center gap-1.5">
+                      <Link
+                        href={`/customer/tracking/${b.id}`}
+                        className="px-3 py-1.5 bg-amber-400 hover:bg-amber-300 text-emerald-950 text-xs font-black rounded-xl transition flex items-center gap-1 shadow-xs"
+                      >
+                        <Star className="w-3.5 h-3.5 fill-emerald-950" />
+                        <span>Rate Partner ⭐</span>
+                      </Link>
+
                       <a
                         href="tel:+919876543210"
                         className="p-1.5 border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold rounded-xl flex items-center gap-1 transition"

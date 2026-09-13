@@ -143,7 +143,7 @@ export default function CustomerDashboard() {
             }
             if (b.status === 'IN_PROGRESS' && liveJobStatus !== 'IN_PROGRESS') {
               setLiveJobStatus('IN_PROGRESS');
-            } else if (b.status === 'COMPLETED' && liveJobStatus !== 'COMPLETED') {
+            } else if (b.status === 'COMPLETED') {
               setLiveJobStatus('COMPLETED');
               if (!hasRated && !isFeedbackOpen) {
                 setIsFeedbackOpen(true);
@@ -513,12 +513,23 @@ export default function CustomerDashboard() {
                     </p>
                   </div>
                 </div>
-                <Link
-                  href="/customer/tracking/1"
-                  className="bg-teal-600 hover:bg-teal-700 text-white font-bold text-[11px] px-3 py-1.5 rounded-lg transition"
-                >
-                  {liveJobStatus === 'IN_PROGRESS' ? 'View Live Job' : 'Track Partner'}
-                </Link>
+                {liveJobStatus === 'COMPLETED' ? (
+                  <button
+                    type="button"
+                    onClick={() => setIsFeedbackOpen(true)}
+                    className="bg-amber-400 hover:bg-amber-300 text-emerald-950 font-black text-[11px] px-3 py-1.5 rounded-lg transition shadow-xs flex items-center gap-1 cursor-pointer"
+                  >
+                    <Star className="w-3.5 h-3.5 fill-emerald-950" />
+                    <span>Rate Partner</span>
+                  </button>
+                ) : (
+                  <Link
+                    href={`/customer/tracking/${activeBookingId || '1'}`}
+                    className="bg-teal-600 hover:bg-teal-700 text-white font-bold text-[11px] px-3 py-1.5 rounded-lg transition"
+                  >
+                    {liveJobStatus === 'IN_PROGRESS' ? 'View Live Job' : 'Track Partner'}
+                  </Link>
+                )}
               </div>
             </div>
 

@@ -23,6 +23,13 @@ export default function JobTrackingPage({ params }: { params: { id: string } }) 
   const [bookingData, setBookingData] = useState<any>(null);
   const [otpDigits, setOtpDigits] = useState<string[]>(['5', '8', '2', '1']);
 
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedbackRating, setFeedbackRating] = useState(5);
+  const [feedbackComment, setFeedbackComment] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>(['⏱️ On-Time Arrival', '🛠️ Expert Workmanship']);
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -35,7 +42,10 @@ export default function JobTrackingPage({ params }: { params: { id: string } }) 
     // Check stored status
     const storedStatus = localStorage.getItem('sahyog_active_job_status');
     if (storedStatus === 'IN_PROGRESS') setLiveJobStatus('IN_PROGRESS');
-    if (storedStatus === 'COMPLETED') setLiveJobStatus('COMPLETED');
+    if (storedStatus === 'COMPLETED') {
+      setLiveJobStatus('COMPLETED');
+      setShowFeedbackModal(true);
+    }
 
     const fetchBooking = async () => {
       try {
@@ -52,6 +62,11 @@ export default function JobTrackingPage({ params }: { params: { id: string } }) 
               setLiveJobStatus('IN_PROGRESS');
             } else if (data.booking.status === 'COMPLETED') {
               setLiveJobStatus('COMPLETED');
+              setShowFeedbackModal((prev) => {
+                const alreadyRated = typeof window !== 'undefined' && localStorage.getItem(`sahyog-rated-${data.booking.id}`);
+                if (!alreadyRated && !prev && !feedbackSubmitted) return true;
+                return prev;
+              });
             }
           }
         }
@@ -69,10 +84,8 @@ export default function JobTrackingPage({ params }: { params: { id: string } }) 
         setTimeout(() => setLiveToast(''), 5000);
       } else if (data.type === 'JOB_COMPLETED') {
         setLiveJobStatus('COMPLETED');
-        setLiveToast('🎉 Service Completed! Redirecting to Partner Review...');
-        setTimeout(() => {
-          router.push('/customer/dashboard');
-        }, 2500);
+        setLiveToast('🎉 Service Completed! Please rate your partner.');
+        setShowFeedbackModal(true);
       }
     };
 
@@ -98,7 +111,7 @@ export default function JobTrackingPage({ params }: { params: { id: string } }) 
       channel?.close();
       window.removeEventListener('storage', handleStorage);
     };
-  }, [params?.id, router]);
+  }, [params?.id, feedbackSubmitted]);
 
   const handleConfirmCancel = () => {
     setIsCancelled(true);
@@ -250,17 +263,21 @@ export default function JobTrackingPage({ params }: { params: { id: string } }) 
 
           {/* OTP Section or Completion Rating Prompt */}
           {liveJobStatus === 'COMPLETED' ? (
-            <div className="mx-4 mt-4 bg-linear-to-r from-teal-700 to-emerald-700 rounded-xl p-5 text-center text-white shadow-md">
-              <Sparkles className="w-8 h-8 mx-auto text-yellow-300 mb-1" />
-              <h3 className="font-bold text-base">Service Completed Successfully!</h3>
-              <p className="text-xs text-teal-100 mt-1 mb-3">Your feedback helps partners maintain top service quality.</p>
-              <Link
-                href="/customer/dashboard"
-                className="inline-flex items-center justify-center gap-2 w-full py-3 bg-white text-teal-800 font-bold rounded-xl text-sm shadow-md hover:bg-teal-50 transition"
+            <div className="mx-4 mt-4 bg-gradient-to-r from-teal-800 via-teal-700 to-emerald-700 rounded-2xl p-5 text-center text-white shadow-xl space-y-2 border border-teal-500/30">
+              <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-xs flex items-center justify-center mx-auto text-amber-300">
+                <Star className="w-7 h-7 fill-amber-300" />
+              </div>
+              <p className="text-[11px] tracking-widest text-emerald-200 font-bold uppercase">SERVICE COMPLETED</p>
+              <h3 className="text-base font-black text-white">Service Completed Successfully!</h3>
+              <p className="text-xs text-emerald-100">Partner {currentWorkerName} has finished your service.</p>
+              <button
+                type="button"
+                onClick={() => setShowFeedbackModal(true)}
+                className="w-full mt-2 py-3 bg-amber-400 hover:bg-amber-300 text-emerald-950 font-black text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
               >
-                <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-                <span>Rate & Review {currentWorkerName} Now</span>
-              </Link>
+                <Star className="w-4 h-4 fill-emerald-950" />
+                <span>{feedbackSubmitted ? 'Review Submitted ✓' : 'Rate & Review Your Experience'}</span>
+              </button>
             </div>
           ) : liveJobStatus === 'IN_PROGRESS' ? (
             <div className="mx-4 mt-4 bg-emerald-600 rounded-xl p-4 text-center text-white shadow-sm">
@@ -312,20 +329,155 @@ export default function JobTrackingPage({ params }: { params: { id: string } }) 
             </div>
           </div>
 
-          {/* Cancel Booking Section */}
-          <div className="px-4 mt-6">
-            <button
-              onClick={() => setShowCancelModal(true)}
-              className="w-full py-3.5 border border-red-200 bg-red-50/50 hover:bg-red-50 text-red-600 font-bold rounded-xl text-sm flex items-center justify-center gap-2 transition"
-            >
-              <XCircle className="w-4 h-4" />
-              <span>Cancel This Booking</span>
-            </button>
-            <p className="text-[11px] text-gray-400 text-center mt-1.5">
-              100% full instant refund guaranteed under SahYog Trust Policy
-            </p>
-          </div>
+          {/* Cancel Booking Section - STRICTLY ONLY SHOWN WHEN ARRIVING (BEFORE WORK STARTS) */}
+          {liveJobStatus === 'ARRIVING' && (
+            <div className="px-4 mt-6">
+              <button
+                onClick={() => setShowCancelModal(true)}
+                className="w-full py-3.5 border border-red-200 bg-red-50/50 hover:bg-red-50 text-red-600 font-bold rounded-xl text-sm flex items-center justify-center gap-2 transition"
+              >
+                <XCircle className="w-4 h-4" />
+                <span>Cancel This Booking</span>
+              </button>
+              <p className="text-[11px] text-gray-400 text-center mt-1.5">
+                100% full instant refund guaranteed under SahYog Trust Policy
+              </p>
+            </div>
+          )}
         </>
+      )}
+
+      {/* Live Feedback & Rating Popup Modal */}
+      {showFeedbackModal && (
+        <div className="fixed inset-0 bg-slate-950/75 backdrop-blur-xs z-[100] flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-3xl p-5 max-w-sm w-full shadow-2xl border border-slate-100 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-600">
+                  <Star className="w-4 h-4 fill-amber-500 text-amber-500" />
+                </div>
+                <div>
+                  <h3 className="font-black text-slate-900 text-sm">Rate Your Experience</h3>
+                  <p className="text-[10px] text-slate-500">{currentWorkerName} • {currentServiceTitle}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowFeedbackModal(false)}
+                className="p-1 rounded-full text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+
+            {feedbackSubmitted ? (
+              <div className="py-6 text-center space-y-2">
+                <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
+                  <CheckCircle className="w-8 h-8" />
+                </div>
+                <h4 className="font-black text-slate-900 text-base">Thank You!</h4>
+                <p className="text-xs text-slate-500">Your review was submitted directly to {currentWorkerName}&apos;s profile.</p>
+              </div>
+            ) : (
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                setFeedbackSubmitting(true);
+                const workerName = bookingData?.workerProfile?.user?.fullName || bookingData?.workerName || currentWorkerName;
+                const workerProfileId = bookingData?.workerProfileId;
+
+                try {
+                  await fetch('/api/reviews', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      bookingId: bookingData?.id || params?.id,
+                      workerProfileId,
+                      workerName,
+                      customerName: bookingData?.customer?.fullName || 'Verified Customer',
+                      rating: feedbackRating,
+                      comment: feedbackComment.trim() || 'Exceptional service, highly recommend this partner!',
+                      tags: selectedTags,
+                      recommended: true
+                    })
+                  });
+
+                  if (typeof window !== 'undefined' && bookingData?.id) {
+                    localStorage.setItem(`sahyog-rated-${bookingData.id}`, 'true');
+                  }
+                } catch {}
+
+                setFeedbackSubmitting(false);
+                setFeedbackSubmitted(true);
+                setTimeout(() => {
+                  setShowFeedbackModal(false);
+                  router.push('/customer/dashboard');
+                }, 1800);
+              }} className="space-y-4">
+                {/* 5-Star Selection */}
+                <div className="text-center space-y-1">
+                  <p className="text-xs font-bold text-slate-700">How was the service?</p>
+                  <div className="flex justify-center gap-2 py-1">
+                    {[1, 2, 3, 4, 5].map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setFeedbackRating(s)}
+                        className="p-1 cursor-pointer transition transform active:scale-90 hover:scale-110"
+                      >
+                        <Star className={`w-8 h-8 ${s <= feedbackRating ? 'text-amber-400 fill-amber-400' : 'text-slate-200'}`} />
+                      </button>
+                    ))}
+                  </div>
+                  <span className="text-[11px] font-bold text-amber-600">
+                    {feedbackRating === 5 ? '🌟 Exceptional (5.0)' : feedbackRating === 4 ? '👍 Very Good (4.0)' : feedbackRating === 3 ? '👌 Good (3.0)' : '⚠️ Needs Improvement'}
+                  </span>
+                </div>
+
+                {/* Quick Compliment Tags */}
+                <div>
+                  <p className="text-[11px] font-bold text-slate-600 mb-1.5">What did you like best?</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {['⏱️ On-Time Arrival', '🛠️ Expert Work', '🧹 Clean & Tidy', '🤝 Polite Behavior', '💰 Fair Price'].map((tag) => {
+                      const isSel = selectedTags.includes(tag);
+                      return (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => setSelectedTags(prev => isSel ? prev.filter(t => t !== tag) : [...prev, tag])}
+                          className={`text-[10px] font-bold px-2.5 py-1 rounded-full transition border ${
+                            isSel ? 'bg-teal-700 text-white border-teal-700 shadow-xs' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          {tag}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Comment input */}
+                <div>
+                  <label className="text-[11px] font-bold text-slate-700 block mb-1">Feedback / Comment (Optional)</label>
+                  <textarea
+                    rows={2}
+                    value={feedbackComment}
+                    onChange={(e) => setFeedbackComment(e.target.value)}
+                    placeholder="Share any comments about the partner's service..."
+                    className="w-full text-xs p-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:border-teal-600 outline-none"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={feedbackSubmitting}
+                  className="w-full py-3 bg-teal-700 hover:bg-teal-800 disabled:bg-slate-300 text-white font-black text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {feedbackSubmitting ? 'Submitting Review...' : 'Submit Review to Partner ⭐'}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
       )}
 
       {/* Cancel Confirmation Modal */}

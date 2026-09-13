@@ -9,6 +9,7 @@ import {
   KeyRound, QrCode, Banknote, X, Loader2
 } from 'lucide-react';
 import RealTrackingMap from '@/components/RealTrackingMap';
+import BottomNav from '@/components/BottomNav';
 
 interface JobBooking {
   id: string;
@@ -140,93 +141,84 @@ export default function WorkerBookingsPage() {
   const [collectPaymentJob, setCollectPaymentJob] = useState<JobBooking | null>(null);
   const [paymentDoneNotice, setPaymentDoneNotice] = useState('');
 
-  // Load live bookings from localStorage & API
+  // Load live bookings from Database API strictly matching this worker
   useEffect(() => {
-    let combinedJobs = [...initialJobs];
+    const currentWorkerName = typeof window !== 'undefined' ? (localStorage.getItem('sahyog-user-name') || '') : '';
+    const currentWorkerPhone = typeof window !== 'undefined' ? (localStorage.getItem('sahyog-user-phone') || '') : '';
 
-    // 1. Check local storage bookings placed by customer
-    if (typeof window !== 'undefined') {
+    const pollBookings = async () => {
       try {
-        const raw = localStorage.getItem('sahyog-user-bookings');
-        if (raw) {
-          const list = JSON.parse(raw);
-          if (Array.isArray(list) && list.length > 0) {
-            const localMapped: JobBooking[] = list.map((b: any) => ({
-              id: b.id || b.bookingCode || 'BK-3387',
-              service: b.serviceTitle || b.serviceName || 'Home & Kitchen Cleaning Expert',
-              category: 'Cleaning',
-              customerName: b.customerName || b.customer?.fullName || 'Jeel vyas',
-              customerPhone: b.customerPhone || '+91 91066 38851',
-              address: b.address || b.serviceLocation || 'B/402, Shanti Heights, Sector 12, Ahmedabad',
-              date: b.scheduledDate || 'Today',
-              time: b.scheduledTime || 'Now • In Transit',
-              amount: b.totalAmount || 731,
-              paymentMode: b.paymentTiming === 'AFTER_SERVICE' ? 'Cash / UPI on Arrival' : 'Online Paid',
-              status: (b.status === 'IN_PROGRESS' ? 'IN_PROGRESS' : b.status === 'COMPLETED' ? 'COMPLETED' : 'ACTIVE') as any,
-              distance: '1.0 km away',
-              otpVerified: b.status === 'IN_PROGRESS' || !!b.otpVerifiedAt,
-              expectedOtp: b.workerOtp || '3387',
-              workerName: b.workerName || 'Sunita Mehra',
-            }));
-            combinedJobs = [...localMapped, ...initialJobs.filter(ij => !localMapped.some(lm => lm.id === ij.id))];
-            setJobs(combinedJobs);
+        const nameParam = currentWorkerName ? `?workerName=${encodeURIComponent(currentWorkerName)}` : '';
+        const res = await fetch(`/api/bookings${nameParam}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.bookings && Array.isArray(data.bookings)) {
+            const myBookings = data.bookings.filter((b: any) => {
+              const bWorkerName = b.workerProfile?.user?.fullName || b.workerName;
+              const bWorkerPhone = b.workerProfile?.user?.phone || b.workerPhone;
+              const matchesName = bWorkerName && currentWorkerName && (
+                bWorkerName.toLowerCase().includes(currentWorkerName.toLowerCase()) ||
+                currentWorkerName.toLowerCase().includes(bWorkerName.toLowerCase())
+              );
+              const matchesPhone = bWorkerPhone && currentWorkerPhone && (
+                bWorkerPhone.replace(/\D/g, '').includes(currentWorkerPhone.replace(/\D/g, '').slice(-10))
+              );
+              return matchesName || matchesPhone || !currentWorkerName;
+            });
+
+            if (myBookings.length > 0) {
+              const mapped: JobBooking[] = myBookings.map((b: any) => ({
+                id: b.id,
+                service: b.serviceTitle || b.serviceName || 'Home Service Specialist',
+                category: 'Service',
+                customerName: b.customer?.fullName || b.customerName || 'Verified Customer',
+                customerPhone: b.customer?.phone || b.customerPhone || '+91 98765 43210',
+                address: b.serviceLocation || 'Ahmedabad, Gujarat',
+                date: b.scheduledDate ? new Date(b.scheduledDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'Today',
+                time: b.scheduledTime || 'Now • In Transit',
+                amount: b.totalAmount || 650,
+                paymentMode: b.paymentTiming === 'AFTER_SERVICE' ? 'Cash / UPI on Arrival' : 'Online Paid',
+                status: (b.status === 'IN_PROGRESS' ? 'IN_PROGRESS' : b.status === 'COMPLETED' ? 'COMPLETED' : 'ACTIVE') as any,
+                distance: '1.8 km',
+                otpVerified: b.status === 'IN_PROGRESS' || !!b.otpVerifiedAt,
+                expectedOtp: b.workerOtp,
+                workerName: b.workerProfile?.user?.fullName || b.workerName,
+              }));
+              setJobs(mapped);
+            } else if (currentWorkerName) {
+              setJobs([]);
+            }
           }
         }
-      } catch {}
-    }
+      } catch (err) {
+        console.warn('Worker bookings fetch error:', err);
+      }
+    };
 
-    // 2. Fetch live bookings from API
-    fetch('/api/bookings')
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data?.bookings && data.bookings.length > 0) {
-          const mapped: JobBooking[] = data.bookings.map((b: any) => ({
-            id: b.id,
-            service: b.serviceTitle || b.serviceName || 'Home Service',
-            category: 'Service',
-            customerName: b.customer?.fullName || 'Customer',
-            customerPhone: b.customer?.phone || '+91 98765 43210',
-            address: b.serviceLocation || 'Ahmedabad, Gujarat',
-            date: new Date(b.scheduledDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
-            time: b.scheduledTime || '10:00 AM',
-            amount: b.totalAmount || 650,
-            paymentMode: b.paymentTiming === 'AFTER_SERVICE' ? 'Cash / UPI on Arrival' : 'Online Paid',
-            status: (b.status === 'IN_PROGRESS' ? 'IN_PROGRESS' : b.status === 'COMPLETED' ? 'COMPLETED' : 'ACTIVE') as any,
-            distance: '1.8 km',
-            otpVerified: !!b.otpVerifiedAt,
-            expectedOtp: b.workerOtp || '3387',
-          }));
-          setJobs((prev) => [...mapped, ...prev.filter((p) => !mapped.some((m) => m.id === p.id))]);
-        }
-      })
-      .catch(() => {});
+    pollBookings();
+    const interval = setInterval(pollBookings, 3000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleVerifyOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!otpModalJob) return;
+    if (!enteredOtp || enteredOtp.length < 4) {
+      setOtpError('Please enter the full 4-digit code provided by customer');
+      return;
+    }
     setOtpError('');
     setVerifyingOtp(true);
 
-    const validOtps = [
-      otpModalJob.expectedOtp,
-      '3387', // Exact OTP from customer tracking screen in user's demo
-      '5821',
-      '1234'
-    ].filter(Boolean);
-
-    const isMatch = validOtps.includes(enteredOtp) || enteredOtp.length === 4;
-
     try {
-      // Fire API verification in background
-      fetch(`/api/bookings/${otpModalJob.id}/verify-otp`, {
+      const res = await fetch(`/api/bookings/${otpModalJob.id}/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ otp: enteredOtp }),
-      }).catch(() => {});
-
-      if (!isMatch) {
-        throw new Error('Incorrect 4-digit customer code');
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Incorrect 4-digit customer code');
       }
 
       // 1. Update jobs state locally
@@ -236,19 +228,28 @@ export default function WorkerBookingsPage() {
         )
       );
 
-      // 2. Sync to localStorage so customer tracking page immediately turns to IN_PROGRESS
+      // 2. Broadcast event to customer
+      const partnerName = otpModalJob.workerName || 'Worker Partner';
+      try {
+        const channel = new BroadcastChannel('sahyog-realtime-sync');
+        channel.postMessage({
+          type: 'JOB_STARTED',
+          bookingId: otpModalJob.id,
+          workerName: partnerName,
+          timestamp: Date.now(),
+        });
+        channel.close();
+      } catch {}
+
       if (typeof window !== 'undefined') {
         try {
-          const raw = localStorage.getItem('sahyog-user-bookings');
-          if (raw) {
-            const list = JSON.parse(raw);
-            const updatedList = list.map((b: any) =>
-              b.id === otpModalJob.id || b.bookingCode === otpModalJob.id
-                ? { ...b, status: 'IN_PROGRESS', otpVerifiedAt: new Date().toISOString() }
-                : b
-            );
-            localStorage.setItem('sahyog-user-bookings', JSON.stringify(updatedList));
-          }
+          localStorage.setItem('sahyog_active_job_status', 'IN_PROGRESS');
+          localStorage.setItem('sahyog-realtime-event', JSON.stringify({
+            type: 'JOB_STARTED',
+            bookingId: otpModalJob.id,
+            workerName: partnerName,
+            timestamp: Date.now(),
+          }));
         } catch {}
       }
 
@@ -257,7 +258,7 @@ export default function WorkerBookingsPage() {
       setOtpModalJob(null);
       setEnteredOtp('');
     } catch (err: any) {
-      setOtpError(err.message || 'Incorrect 4-digit customer code');
+      setOtpError(err.message || 'Incorrect 4-digit customer code. Please ask customer.');
     } finally {
       setVerifyingOtp(false);
     }
@@ -267,12 +268,47 @@ export default function WorkerBookingsPage() {
     setCollectPaymentJob(job);
   };
 
-  const handleConfirmCollection = (method: 'UPI' | 'CASH') => {
+  const handleConfirmCollection = async (method: 'UPI' | 'CASH') => {
     if (!collectPaymentJob) return;
+    const jobId = collectPaymentJob.id;
+
+    // 1. Update Database API so Customer's phone detects COMPLETED!
+    try {
+      await fetch(`/api/bookings/${jobId}/complete`, { method: 'POST' });
+    } catch (err) {
+      console.warn('API booking complete note:', err);
+    }
+
+    // 2. Broadcast realtime event
+    try {
+      const channel = new BroadcastChannel('sahyog-realtime-sync');
+      channel.postMessage({
+        type: 'JOB_COMPLETED',
+        bookingId: jobId,
+        workerName: collectPaymentJob.workerName || 'Worker Partner',
+        service: collectPaymentJob.service,
+        timestamp: Date.now(),
+      });
+      channel.close();
+    } catch {}
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('sahyog_active_job_status', 'COMPLETED');
+        localStorage.setItem('sahyog-realtime-event', JSON.stringify({
+          type: 'JOB_COMPLETED',
+          bookingId: jobId,
+          workerName: collectPaymentJob.workerName || 'Worker Partner',
+          service: collectPaymentJob.service,
+          timestamp: Date.now(),
+        }));
+      } catch {}
+    }
+
     setJobs((prev) =>
-      prev.map((job) => (job.id === collectPaymentJob.id ? { ...job, status: 'COMPLETED' } : job))
+      prev.map((job) => (job.id === jobId ? { ...job, status: 'COMPLETED' } : job))
     );
-    setPaymentDoneNotice(`Payment of ₹${collectPaymentJob.amount} collected via ${method}!`);
+    setPaymentDoneNotice(`Payment of ₹${collectPaymentJob.amount} collected via ${method}! Job marked COMPLETED.`);
     setTimeout(() => setPaymentDoneNotice(''), 4000);
     setCollectPaymentJob(null);
   };
@@ -292,8 +328,8 @@ export default function WorkerBookingsPage() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-100/70 pb-28 text-slate-900">
-      <div className="max-w-xl mx-auto min-h-screen bg-white shadow-xl shadow-slate-200/50 flex flex-col">
+    <div className="min-h-screen bg-slate-100/70 pb-28 text-slate-900 overflow-x-hidden">
+      <div className="max-w-md w-full mx-auto min-h-screen bg-white shadow-xl shadow-slate-200/50 flex flex-col overflow-x-hidden">
         
         {/* Top App Header */}
         <header className="bg-white px-4 py-3.5 flex items-center justify-between border-b border-slate-100 sticky top-0 z-30 shadow-xs">
@@ -388,10 +424,10 @@ export default function WorkerBookingsPage() {
               >
                 {/* Header info */}
                 <div className="flex items-start justify-between">
-                  <div>
+                  <div className="flex-1 min-w-0 pr-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-mono font-bold bg-slate-100 text-slate-600 px-2 py-0.5 rounded">
-                        {job.id}
+                      <span className="text-[10px] font-mono font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded truncate max-w-[120px] inline-block">
+                        {job.id.startsWith('BK-') ? job.id : `#BK-${job.id.slice(-6).toUpperCase()}`}
                       </span>
                       <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
                         job.status === 'ACTIVE'
@@ -403,7 +439,7 @@ export default function WorkerBookingsPage() {
                         {job.status}
                       </span>
                     </div>
-                    <h3 className="font-black text-slate-900 text-sm sm:text-base mt-1 leading-snug">
+                    <h3 className="font-black text-slate-900 text-sm sm:text-base mt-1 leading-snug truncate">
                       {job.service}
                     </h3>
                   </div>
@@ -419,11 +455,11 @@ export default function WorkerBookingsPage() {
                 {/* Customer Details */}
                 <div className="bg-slate-50/80 p-3 rounded-xl border border-slate-100 space-y-1.5 text-xs text-slate-600">
                   <div className="flex items-center justify-between font-medium text-slate-800">
-                    <span className="font-bold flex items-center gap-1.5">
-                      <User className="w-3.5 h-3.5 text-teal-700" />
-                      {job.customerName}
+                    <span className="font-bold flex items-center gap-1.5 truncate">
+                      <User className="w-3.5 h-3.5 text-teal-700 flex-shrink-0" />
+                      <span className="truncate">{job.customerName}</span>
                     </span>
-                    <span className="text-slate-400 font-mono text-[11px]">{job.distance} away</span>
+                    <span className="text-slate-400 font-mono text-[11px] flex-shrink-0">{job.distance.replace(/away/gi, '').trim()} away</span>
                   </div>
 
                   <p className="flex items-center gap-1.5 text-slate-600">
@@ -504,52 +540,8 @@ export default function WorkerBookingsPage() {
           )}
         </main>
 
-        {/* Bottom Navigation */}
-        <nav className="sticky bottom-0 bg-white/95 backdrop-blur-md border-t border-slate-200 px-4 py-2 flex justify-around items-center z-20">
-          <Link 
-            href="/worker/dashboard" 
-            className="flex flex-col items-center justify-center flex-1 py-1 text-slate-400 hover:text-slate-600 group"
-          >
-            <div className="p-1 rounded-xl">
-              <Home className="w-5 h-5" />
-            </div>
-            <p className="text-[10px] font-bold text-slate-400 group-hover:text-slate-600 mt-0.5">Home</p>
-          </Link>
-
-          <Link 
-            href="/worker/bookings" 
-            className="flex flex-col items-center justify-center flex-1 py-1 group"
-          >
-            <div className="p-1 rounded-xl bg-teal-50 text-teal-700">
-              <Calendar className="w-5 h-5 stroke-[2.5]" />
-            </div>
-            <p className="text-[10px] font-bold text-teal-800 mt-0.5">Bookings</p>
-            <span className="w-1 h-1 bg-teal-600 rounded-full mt-0.5" />
-          </Link>
-
-          <Link 
-            href="/chat/1?role=worker" 
-            className="flex flex-col items-center justify-center flex-1 py-1 text-slate-400 hover:text-slate-600 group relative"
-          >
-            <div className="p-1 rounded-xl relative">
-              <MessageSquare className="w-5 h-5" />
-              <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[9px] font-black rounded-full w-4 h-4 flex items-center justify-center shadow-xs">
-                9
-              </span>
-            </div>
-            <p className="text-[10px] font-bold text-slate-400 group-hover:text-slate-600 mt-0.5">Chat</p>
-          </Link>
-
-          <Link 
-            href="/profile" 
-            className="flex flex-col items-center justify-center flex-1 py-1 text-slate-400 hover:text-slate-600 group"
-          >
-            <div className="p-1 rounded-xl">
-              <User className="w-5 h-5" />
-            </div>
-            <p className="text-[10px] font-bold text-slate-400 group-hover:text-slate-600 mt-0.5">Profile</p>
-          </Link>
-        </nav>
+        {/* Standard Role-Aware Bottom Navigation */}
+        <BottomNav role="worker" />
 
       </div>
 
