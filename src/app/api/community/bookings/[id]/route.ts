@@ -14,7 +14,10 @@ export async function PATCH(
     if (action === 'VERIFY_OTP') {
       const cleanOtp = (otp || '').toString().trim();
       
-      let expectedOtp = defaultActiveCommunityBooking.workerOtp;
+      const store = (globalThis as any).__sahyog_community_bookings || [];
+      const item = store.find((b: any) => b.id === bookingId);
+
+      let expectedOtp = item?.workerOtp || defaultActiveCommunityBooking.workerOtp;
       try {
         const dbBooking = await prisma.booking.findUnique({ where: { id: bookingId } });
         if (dbBooking?.workerOtp) expectedOtp = dbBooking.workerOtp;
@@ -22,6 +25,10 @@ export async function PATCH(
 
       if (cleanOtp !== expectedOtp && cleanOtp !== '9240' && cleanOtp !== '8008') {
         return NextResponse.json({ error: 'Incorrect 4-digit Society Gate OTP. Please ask the Society Secretary / Resident at the gate.', success: false }, { status: 400 });
+      }
+
+      if (item) {
+        item.status = 'IN_PROGRESS';
       }
 
       try {
@@ -35,6 +42,12 @@ export async function PATCH(
     }
 
     if (action === 'COMPLETE_JOB' || status === 'COMPLETED') {
+      const store = (globalThis as any).__sahyog_community_bookings || [];
+      const item = store.find((b: any) => b.id === bookingId);
+      if (item) {
+        item.status = 'COMPLETED';
+      }
+
       try {
         await prisma.booking.update({
           where: { id: bookingId },

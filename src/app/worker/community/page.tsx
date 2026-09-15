@@ -129,6 +129,14 @@ export default function WorkerCommunityDashboard() {
         });
         channel.close();
       } catch {}
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('sahyog-realtime-event', JSON.stringify({
+          type: 'COMMUNITY_JOB_STARTED',
+          bookingId: activeBooking.id,
+          timestamp: Date.now()
+        }));
+      }
     } catch (err: any) {
       setOtpError(err.message || 'Incorrect 4-digit Society Gate OTP.');
     } finally {
@@ -159,6 +167,14 @@ export default function WorkerCommunityDashboard() {
       });
       channel.close();
     } catch {}
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sahyog-realtime-event', JSON.stringify({
+        type: 'COMMUNITY_JOB_COMPLETED',
+        bookingId: activeBooking.id,
+        timestamp: Date.now()
+      }));
+    }
   };
 
   const handleExitCommunityMode = () => {

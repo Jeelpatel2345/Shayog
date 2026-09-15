@@ -4,10 +4,11 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { 
-  ArrowLeft, Users, ShieldCheck, CheckCircle2, Star, Clock, 
+  ArrowLeft, Users, ShieldCheck, CheckCircle, CheckCircle2, Star, Clock, 
   MapPin, Phone, Sparkles, Building2, KeyRound, Wrench, 
   ChevronDown, AlertCircle, Check, Loader2, Calendar, ArrowRight,
-  Truck, HardHat, FileText, CheckCheck, X
+  Truck, HardHat, FileText, CheckCheck, X, CreditCard, Smartphone,
+  Building, ThumbsUp
 } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
 import { 
@@ -41,6 +42,53 @@ export default function CustomerCommunityDashboard() {
   const [isSubmittingBooking, setIsSubmittingBooking] = useState(false);
   const [bookingSuccessNotice, setBookingSuccessNotice] = useState('');
 
+  // Payment checkout state
+  const [checkoutStep, setCheckoutStep] = useState<'SCOPE' | 'PAYMENT' | 'PROCESSING' | 'CONFIRMED'>('SCOPE');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'UPI' | 'CARD' | 'NETBANKING' | 'MAINTENANCE_POOL'>('UPI');
+  const [selectedUpiApp, setSelectedUpiApp] = useState<'gpay' | 'phonepe' | 'paytm' | 'bhim'>('gpay');
+  const [customUpiId, setCustomUpiId] = useState('');
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvv, setCardCvv] = useState('');
+  const [selectedBank, setSelectedBank] = useState('State Bank of India');
+  const [generatedGateOtp, setGeneratedGateOtp] = useState('4821');
+
+  // Dedicated Community Feedback Modal State
+  const [isCommunityFeedbackOpen, setIsCommunityFeedbackOpen] = useState(false);
+  const [communityRating, setCommunityRating] = useState(5);
+  const [communityHoverRating, setCommunityHoverRating] = useState(0);
+  const [selectedCommunityTags, setSelectedCommunityTags] = useState<string[]>([
+    '💧 Tank Cleaned & Disinfected',
+    '🛡️ Safety Protocols Complied'
+  ]);
+  const [communityFeedbackText, setCommunityFeedbackText] = useState('');
+  const [communityRecommended, setCommunityRecommended] = useState(true);
+  const [communityFeedbackSubmitted, setCommunityFeedbackSubmitted] = useState(false);
+  const [hasRatedCommunity, setHasRatedCommunity] = useState(false);
+
+  const communityComplimentTags = [
+    '💧 Tank Cleaned & Disinfected',
+    '🛡️ Safety Protocols Complied',
+    '⏱️ Finished On Schedule',
+    '📋 Water Quality Test Passed',
+    '⚡ Cleaned Society Area Afterward',
+    '🤝 Respectful & Disciplined Crew'
+  ];
+
+  const ratingLabels: Record<number, string> = {
+    1: 'Poor (खराब अनुभव) 👎',
+    2: 'Fair (सुधार की आवश्यकता) ⚠️',
+    3: 'Good (संतोषजनक काम) 👌',
+    4: 'Very Good (बहुत बढ़िया काम) 👍',
+    5: 'Exceptional (अति उत्तम / શાનદાર અનુભવ) 🌟'
+  };
+
+  const toggleCommunityTag = (tag: string) => {
+    setSelectedCommunityTags(prev =>
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    );
+  };
+
   // Fetch live community bookings
   useEffect(() => {
     const fetchCommunityBookings = async () => {
@@ -64,10 +112,32 @@ export default function CustomerCommunityDashboard() {
 
     // Cross-tab real-time sync
     const handleRealtime = (data: any) => {
-      if (data?.type === 'COMMUNITY_JOB_STARTED' || data?.type === 'COMMUNITY_JOB_COMPLETED' || data?.type === 'NEW_COMMUNITY_BOOKING') {
+      if (!data) return;
+      if (data.type === 'COMMUNITY_JOB_STARTED') {
+        fetchCommunityBookings();
+        setActiveBooking(prev => prev ? ({ ...prev, status: 'IN_PROGRESS' }) : prev);
+      } else if (data.type === 'COMMUNITY_JOB_COMPLETED') {
+        fetchCommunityBookings();
+        setActiveBooking(prev => prev ? ({ ...prev, status: 'COMPLETED' }) : prev);
+        const commBkId = localStorage.getItem('sahyog_active_community_booking_id');
+        const isCommRated = commBkId ? localStorage.getItem('sahyog-community-rated-' + commBkId) === 'true' : false;
+        if (!isCommRated && !hasRatedCommunity) {
+          setIsCommunityFeedbackOpen(true);
+        }
+      } else if (data.type === 'NEW_COMMUNITY_BOOKING') {
         fetchCommunityBookings();
       }
     };
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'sahyog-realtime-event' && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          handleRealtime(parsed);
+        } catch {}
+      }
+    };
+    window.addEventListener('storage', handleStorage);
 
     let channel: BroadcastChannel | null = null;
     try {
@@ -80,6 +150,7 @@ export default function CustomerCommunityDashboard() {
     return () => {
       clearInterval(interval);
       if (channel) channel.close();
+      window.removeEventListener('storage', handleStorage);
     };
   }, [selectedSociety.id]);
 
@@ -89,12 +160,19 @@ export default function CustomerCommunityDashboard() {
     setTimeout(() => setCopiedOtp(false), 2000);
   };
 
-  const handleConfirmCommunityBooking = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!bookingModalPkg) return;
+  const handleOpenDeployModal = (pkg: CommunityPackage) => {
+    setBookingModalPkg(pkg);
+    setCheckoutStep('SCOPE');
+    setSelectedPaymentMethod('UPI');
+    setSelectedUpiApp('gpay');
+  };
 
-    setIsSubmittingBooking(true);
+  const handleProcessPayment = async () => {
+    if (!bookingModalPkg) return;
+    setCheckoutStep('PROCESSING');
+
     const newOtp = String(Math.floor(1000 + Math.random() * 9000));
+    setGeneratedGateOtp(newOtp);
     const bookingId = 'comm_bk_' + Date.now().toString(36);
 
     try {
@@ -114,8 +192,10 @@ export default function CustomerCommunityDashboard() {
           scheduledTime: selectedTime,
           totalAmount: bookingModalPkg.discountedRateINR,
           workerOtp: newOtp,
+          paymentMethod: selectedPaymentMethod,
+          paymentStatus: 'PAID',
           orderedBy: `Resident / Secretary (${societyTowers})`,
-          ordererPhone: selectedSociety.managerPhone,
+          ordererPhone: selectedSociety.managerPhone || '+91 98250 11223',
         })
       });
 
@@ -123,17 +203,16 @@ export default function CustomerCommunityDashboard() {
       if (data?.booking) {
         setActiveBooking(data.booking);
         setBookingsList(prev => [data.booking, ...prev]);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('sahyog_active_community_booking_id', data.booking.id);
+          localStorage.removeItem('sahyog-community-rated-' + data.booking.id);
+          setHasRatedCommunity(false);
+        }
       }
     } catch (err) {
       console.warn('Local fallback for community booking');
     }
 
-    setIsSubmittingBooking(false);
-    setBookingModalPkg(null);
-    setBookingSuccessNotice(`🎉 Multi-Worker Squad Scheduled for ${selectedSociety.shortName}! Gate Arrival OTP: ${newOtp}`);
-    setTimeout(() => setBookingSuccessNotice(''), 7000);
-
-    // Broadcast event
     try {
       const channel = new BroadcastChannel('sahyog-realtime-sync');
       channel.postMessage({
@@ -143,6 +222,67 @@ export default function CustomerCommunityDashboard() {
       });
       channel.close();
     } catch {}
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sahyog-realtime-event', JSON.stringify({
+        type: 'NEW_COMMUNITY_BOOKING',
+        societyName: selectedSociety.name,
+        timestamp: Date.now()
+      }));
+    }
+
+    setTimeout(() => {
+      setCheckoutStep('CONFIRMED');
+    }, 1500);
+  };
+
+  const handleCommunityRatingSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeBooking) return;
+
+    const reviewObj = {
+      bookingId: activeBooking.id,
+      workerName: activeBooking.leadWorkerName,
+      customerName: 'Society Secretary',
+      service: activeBooking.packageTitle,
+      rating: communityRating,
+      tags: selectedCommunityTags,
+      feedback: communityFeedbackText.trim() || 'Exceptional squad service, all towers serviced properly.',
+      recommended: communityRecommended,
+      societyName: selectedSociety.name,
+      createdAt: new Date().toISOString()
+    };
+
+    try {
+      fetch('/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          bookingId: activeBooking.id,
+          workerName: activeBooking.leadWorkerName,
+          customerName: 'Society Secretary',
+          rating: communityRating,
+          comment: communityFeedbackText.trim() || 'Exceptional squad service, all towers serviced properly.',
+          tags: selectedCommunityTags,
+          recommended: communityRecommended
+        })
+      }).catch(() => {});
+    } catch {}
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sahyog-community-rated-' + activeBooking.id, 'true');
+      const existingReviews = JSON.parse(localStorage.getItem('sahyog-community-reviews') || '[]');
+      existingReviews.unshift(reviewObj);
+      localStorage.setItem('sahyog-community-reviews', JSON.stringify(existingReviews));
+    }
+
+    setCommunityFeedbackSubmitted(true);
+    setHasRatedCommunity(true);
+
+    setTimeout(() => {
+      setIsCommunityFeedbackOpen(false);
+      setCommunityFeedbackSubmitted(false);
+    }, 2200);
   };
 
   return (
@@ -402,7 +542,7 @@ export default function CustomerCommunityDashboard() {
 
                   <button
                     type="button"
-                    onClick={() => setBookingModalPkg(pkg)}
+                    onClick={() => handleOpenDeployModal(pkg)}
                     className="bg-teal-700 hover:bg-teal-800 text-white font-black text-xs px-4 py-2.5 rounded-xl shadow-sm transition flex items-center gap-1.5 cursor-pointer"
                   >
                     <span>Schedule Squad</span>
@@ -415,13 +555,15 @@ export default function CustomerCommunityDashboard() {
         </div>
       </div>
 
-      {/* Booking Modal */}
+      {/* 4. Booking Checkout & Payment Modal */}
       {bookingModalPkg && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl border border-slate-200 space-y-5 animate-in fade-in zoom-in-95">
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl p-5 sm:p-6 max-w-md w-full shadow-2xl border border-slate-200 space-y-4 animate-in fade-in zoom-in-95 my-auto max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b pb-3">
               <div>
-                <span className="text-[10px] font-bold text-teal-700 uppercase tracking-wider">Deploy Society Squad</span>
+                <span className="text-[10px] font-black text-teal-700 uppercase tracking-wider">
+                  {checkoutStep === 'SCOPE' ? 'Step 1: Society & Towers' : checkoutStep === 'PAYMENT' ? 'Step 2: Payment' : 'Confirmation'}
+                </span>
                 <h3 className="font-black text-slate-900 text-base">{bookingModalPkg.title}</h3>
               </div>
               <button 
@@ -432,106 +574,416 @@ export default function CustomerCommunityDashboard() {
               </button>
             </div>
 
-            <form onSubmit={handleConfirmCommunityBooking} className="space-y-4 text-xs">
-              <div className="p-3 bg-teal-50 rounded-2xl border border-teal-200 space-y-1">
-                <div className="flex justify-between font-bold text-teal-950">
-                  <span>Target Society:</span>
-                  <span>{selectedSociety.name}</span>
+            {checkoutStep === 'SCOPE' && (
+              <div className="space-y-3.5 text-xs">
+                <div className="p-3 bg-teal-50 rounded-2xl border border-teal-200 space-y-1">
+                  <div className="flex justify-between font-bold text-teal-950">
+                    <span>Target Society:</span>
+                    <span>{selectedSociety.name}</span>
+                  </div>
+                  <div className="flex justify-between text-teal-800 text-[11px]">
+                    <span>Crew Deployment:</span>
+                    <span>{bookingModalPkg.crewSize} Specialized Workers</span>
+                  </div>
+                  <div className="flex justify-between text-teal-800 text-[11px]">
+                    <span>Lead Supervisor:</span>
+                    <span>{bookingModalPkg.leadWorkerName}</span>
+                  </div>
+                  <div className="flex justify-between font-black text-teal-950 pt-1 border-t border-teal-200 text-sm">
+                    <span>Squad Pool Rate:</span>
+                    <span className="text-teal-900">₹{bookingModalPkg.discountedRateINR}</span>
+                  </div>
                 </div>
-                <div className="flex justify-between text-teal-800 text-[11px]">
-                  <span>Crew Deployment:</span>
-                  <span>{bookingModalPkg.crewSize} Specialized Workers</span>
+
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Select Schedule Date</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {['Today', 'Tomorrow', 'This Weekend'].map((d) => (
+                      <button
+                        key={d}
+                        type="button"
+                        onClick={() => setSelectedDate(d)}
+                        className={`py-2 px-3 rounded-xl font-bold border transition ${
+                          selectedDate === d
+                            ? 'bg-teal-700 text-white border-teal-700'
+                            : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {d}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex justify-between text-teal-800 text-[11px]">
-                  <span>Team Leader:</span>
-                  <span>{bookingModalPkg.leadWorkerName}</span>
+
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Preferred Time Slot</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {['09:00 AM', '02:00 PM', '04:00 PM'].map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setSelectedTime(t)}
+                        className={`py-2 px-3 rounded-xl font-bold border transition ${
+                          selectedTime === t
+                            ? 'bg-teal-700 text-white border-teal-700'
+                            : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex justify-between font-black text-teal-950 pt-1 border-t border-teal-200 text-sm">
-                  <span>Society Pool Total:</span>
-                  <span className="text-teal-900">₹{bookingModalPkg.discountedRateINR}</span>
+
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Building Wings / Towers</label>
+                  <input
+                    type="text"
+                    value={societyTowers}
+                    onChange={(e) => setSocietyTowers(e.target.value)}
+                    placeholder="e.g. Towers A, B, C & Clubhouse Sump"
+                    className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-900 font-medium outline-none focus:border-teal-600"
+                  />
+                </div>
+
+                <div className="pt-2 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setBookingModalPkg(null)}
+                    className="flex-1 py-3 bg-slate-100 text-slate-700 font-bold rounded-xl cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCheckoutStep('PAYMENT')}
+                    className="flex-1 py-3 bg-teal-700 hover:bg-teal-800 text-white font-black rounded-xl shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <span>Next: Payment</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
+            )}
 
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Select Schedule Date</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {['Today', 'Tomorrow', 'This Weekend'].map((d) => (
+            {checkoutStep === 'PAYMENT' && (
+              <div className="space-y-4 text-xs">
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-1.5">
+                  <div className="flex justify-between font-medium text-slate-600">
+                    <span>Base Package Rate:</span>
+                    <span>₹{bookingModalPkg.baseRateINR}</span>
+                  </div>
+                  <div className="flex justify-between font-medium text-emerald-700">
+                    <span>Group Society Subsidy ({bookingModalPkg.residentSavingsPercent}%):</span>
+                    <span>-₹{bookingModalPkg.baseRateINR - bookingModalPkg.discountedRateINR}</span>
+                  </div>
+                  <div className="flex justify-between font-medium text-slate-600">
+                    <span>GST (18% Included):</span>
+                    <span>Included</span>
+                  </div>
+                  <div className="pt-2 border-t border-slate-200 flex justify-between items-center text-sm font-black text-slate-900">
+                    <span>Total Amount:</span>
+                    <span className="text-base text-teal-800">₹{bookingModalPkg.discountedRateINR}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700 block mb-2 uppercase tracking-wider text-[10px]">
+                    Select Payment Method
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
                     <button
-                      key={d}
                       type="button"
-                      onClick={() => setSelectedDate(d)}
-                      className={`py-2 px-3 rounded-xl font-bold border transition ${
-                        selectedDate === d
-                          ? 'bg-teal-700 text-white border-teal-700'
-                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                      onClick={() => setSelectedPaymentMethod('UPI')}
+                      className={`p-3 rounded-2xl border text-left transition flex items-center gap-2.5 cursor-pointer ${
+                        selectedPaymentMethod === 'UPI'
+                          ? 'bg-teal-50 border-teal-600 text-teal-950 font-bold shadow-xs'
+                          : 'bg-white border-slate-200 text-slate-700'
                       }`}
                     >
-                      {d}
+                      <Smartphone className="w-5 h-5 text-teal-700 flex-shrink-0" />
+                      <div>
+                        <p className="text-xs font-black">UPI Instant</p>
+                        <p className="text-[10px] text-slate-500">GPay, PhonePe, Paytm</p>
+                      </div>
                     </button>
-                  ))}
-                </div>
-              </div>
 
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Preferred Time Slot</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {['09:00 AM', '02:00 PM', '04:00 PM'].map((t) => (
                     <button
-                      key={t}
                       type="button"
-                      onClick={() => setSelectedTime(t)}
-                      className={`py-2 px-3 rounded-xl font-bold border transition ${
-                        selectedTime === t
-                          ? 'bg-teal-700 text-white border-teal-700'
-                          : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                      onClick={() => setSelectedPaymentMethod('CARD')}
+                      className={`p-3 rounded-2xl border text-left transition flex items-center gap-2.5 cursor-pointer ${
+                        selectedPaymentMethod === 'CARD'
+                          ? 'bg-teal-50 border-teal-600 text-teal-950 font-bold shadow-xs'
+                          : 'bg-white border-slate-200 text-slate-700'
                       }`}
                     >
-                      {t}
+                      <CreditCard className="w-5 h-5 text-teal-700 flex-shrink-0" />
+                      <div>
+                        <p className="text-xs font-black">Society Card</p>
+                        <p className="text-[10px] text-slate-500">Visa, Mastercard</p>
+                      </div>
                     </button>
-                  ))}
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPaymentMethod('NETBANKING')}
+                      className={`p-3 rounded-2xl border text-left transition flex items-center gap-2.5 cursor-pointer ${
+                        selectedPaymentMethod === 'NETBANKING'
+                          ? 'bg-teal-50 border-teal-600 text-teal-950 font-bold shadow-xs'
+                          : 'bg-white border-slate-200 text-slate-700'
+                      }`}
+                    >
+                      <Building className="w-5 h-5 text-teal-700 flex-shrink-0" />
+                      <div>
+                        <p className="text-xs font-black">Net Banking</p>
+                        <p className="text-[10px] text-slate-500">SBI, HDFC, ICICI</p>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPaymentMethod('MAINTENANCE_POOL')}
+                      className={`p-3 rounded-2xl border text-left transition flex items-center gap-2.5 cursor-pointer ${
+                        selectedPaymentMethod === 'MAINTENANCE_POOL'
+                          ? 'bg-teal-50 border-teal-600 text-teal-950 font-bold shadow-xs'
+                          : 'bg-white border-slate-200 text-slate-700'
+                      }`}
+                    >
+                      <Users className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                      <div>
+                        <p className="text-xs font-black">RWA Fund Pool</p>
+                        <p className="text-[10px] text-slate-500">Pay on Gate Arrival</p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setCheckoutStep('SCOPE')}
+                    className="px-4 py-3 bg-slate-100 text-slate-700 font-bold rounded-xl cursor-pointer"
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleProcessPayment()}
+                    className="flex-1 py-3.5 bg-teal-700 hover:bg-teal-800 text-white font-black rounded-xl shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer text-sm"
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>Authorize & Pay ₹{bookingModalPkg.discountedRateINR}</span>
+                  </button>
                 </div>
               </div>
+            )}
 
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Building Wings / Towers to Cover</label>
-                <input
-                  type="text"
-                  value={societyTowers}
-                  onChange={(e) => setSocietyTowers(e.target.value)}
-                  placeholder="e.g. Towers A, B, C & Clubhouse"
-                  className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-900 font-medium outline-none focus:border-teal-600"
-                />
+            {checkoutStep === 'PROCESSING' && (
+              <div className="py-10 text-center space-y-3 animate-in zoom-in-95">
+                <div className="w-14 h-14 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center mx-auto">
+                  <Loader2 className="w-8 h-8 animate-spin" />
+                </div>
+                <h4 className="font-black text-base text-slate-900">Authorizing Society Payment...</h4>
+                <p className="text-xs text-slate-500">
+                  Generating 4-Digit Gate Arrival OTP & Dispatching Multi-Worker Squad.
+                </p>
               </div>
+            )}
 
-              <div>
-                <label className="font-bold text-slate-700 block mb-1">Instructions for Security Gate / Supervisor</label>
-                <textarea
-                  rows={2}
-                  value={residentNotes}
-                  onChange={(e) => setResidentNotes(e.target.value)}
-                  placeholder="e.g. Squad van should park near Tower B basement ramp..."
-                  className="w-full p-2.5 border border-slate-200 rounded-xl bg-slate-50 text-slate-900 outline-none focus:border-teal-600 resize-none"
-                />
-              </div>
+            {checkoutStep === 'CONFIRMED' && (
+              <div className="py-6 text-center space-y-4 animate-in zoom-in-95">
+                <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
+                  <CheckCircle2 className="w-9 h-9" />
+                </div>
+                <div>
+                  <h4 className="font-black text-lg text-slate-900">Society Squad Dispatched!</h4>
+                  <p className="text-xs text-slate-600 mt-1">
+                    Assigned to {selectedSociety.name}.
+                  </p>
+                </div>
 
-              <div className="pt-2 flex gap-2">
+                <div className="p-4 bg-teal-900 text-white rounded-2xl max-w-xs mx-auto space-y-1">
+                  <span className="text-[10px] font-black uppercase text-amber-300">Society Gate Arrival OTP</span>
+                  <div className="text-3xl font-mono font-black tracking-widest text-white py-1">
+                    {generatedGateOtp}
+                  </div>
+                  <p className="text-[10px] text-teal-200">
+                    Hand over this OTP to the Security Guard for gate entry.
+                  </p>
+                </div>
+
                 <button
                   type="button"
-                  onClick={() => setBookingModalPkg(null)}
-                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition cursor-pointer"
+                  onClick={() => {
+                    setBookingModalPkg(null);
+                    setCheckoutStep('SCOPE');
+                  }}
+                  className="w-full py-3 bg-teal-700 hover:bg-teal-800 text-white font-black rounded-xl text-xs cursor-pointer"
                 >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmittingBooking}
-                  className="flex-1 py-3 bg-teal-700 hover:bg-teal-800 disabled:opacity-50 text-white font-black rounded-xl shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  {isSubmittingBooking ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                  <span>Confirm Society Squad</span>
+                  View Active Booking
                 </button>
               </div>
-            </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 5. Dedicated Community Squad Feedback Modal */}
+      {isCommunityFeedbackOpen && activeBooking && (
+        <div className="fixed inset-0 z-[115] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 animate-in zoom-in-95 flex flex-col max-h-[85vh] my-auto">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-[#042f2e] via-[#0d9488] to-[#042f2e] text-white p-4 sm:p-5 relative flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsCommunityFeedbackOpen(false)}
+                className="absolute top-3.5 right-3.5 text-emerald-200 hover:text-white p-1.5 rounded-full bg-white/10 hover:bg-white/20 transition cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-amber-400 text-teal-950 font-black text-base flex items-center justify-center shadow-md flex-shrink-0">
+                  <HardHat className="w-6 h-6 text-teal-950" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-black uppercase tracking-wider bg-amber-400/20 text-amber-300 border border-amber-400/40 px-2 py-0.5 rounded-full">
+                    Society Squad Feedback
+                  </span>
+                  <h3 className="font-black text-base text-white mt-1 leading-tight">
+                    {activeBooking.packageTitle}
+                  </h3>
+                  <p className="text-xs text-emerald-100/90">
+                    Lead: {activeBooking.leadWorkerName} • {selectedSociety.name}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1 overscroll-contain">
+              {communityFeedbackSubmitted ? (
+                <div className="py-8 text-center space-y-3 animate-in zoom-in-95">
+                  <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-inner">
+                    <CheckCircle2 className="w-10 h-10" />
+                  </div>
+                  <h4 className="font-black text-xl text-slate-900">Society Feedback Recorded!</h4>
+                  <p className="text-xs text-slate-600 max-w-sm mx-auto">
+                    Thank you for rating <b>{activeBooking.leadWorkerName}</b> and the crew.
+                  </p>
+                </div>
+              ) : (
+                <form id="comm-feedback-form" onSubmit={handleCommunityRatingSubmit} className="space-y-4 text-xs">
+                  <div className="text-center py-2 bg-slate-50 rounded-2xl border border-slate-100 p-4">
+                    <label className="block text-xs font-black uppercase tracking-wider text-slate-500 mb-2">
+                      Rate Overall Squad Work Quality
+                    </label>
+                    <div className="flex items-center justify-center gap-2 my-1">
+                      {[1, 2, 3, 4, 5].map((star) => {
+                        const isFilled = (communityHoverRating || communityRating) >= star;
+                        return (
+                          <button
+                            key={star}
+                            type="button"
+                            onMouseEnter={() => setCommunityHoverRating(star)}
+                            onMouseLeave={() => setCommunityHoverRating(0)}
+                            onClick={() => setCommunityRating(star)}
+                            className="p-1 transition-transform hover:scale-125 focus:outline-none cursor-pointer"
+                          >
+                            <Star
+                              className={`w-8 h-8 transition-colors ${
+                                isFilled ? 'text-amber-400 fill-amber-400' : 'text-slate-300 fill-slate-100'
+                              }`}
+                            />
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="text-xs font-black text-teal-800 mt-1">
+                      {ratingLabels[communityHoverRating || communityRating]}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                      Society Quality Compliance
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {communityComplimentTags.map((tag) => {
+                        const isSelected = selectedCommunityTags.includes(tag);
+                        return (
+                          <button
+                            key={tag}
+                            type="button"
+                            onClick={() => toggleCommunityTag(tag)}
+                            className={`text-xs font-bold px-3 py-1.5 rounded-xl border transition cursor-pointer flex items-center gap-1 ${
+                              isSelected
+                                ? 'bg-teal-700 text-white border-teal-700'
+                                : 'bg-slate-50 text-slate-700 border-slate-200 hover:border-slate-300'
+                            }`}
+                          >
+                            <span>{tag}</span>
+                            {isSelected && <CheckCircle className="w-3 h-3 text-emerald-300 ml-1" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                      Society Secretary / Resident Feedback (Optional)
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={communityFeedbackText}
+                      onChange={(e) => setCommunityFeedbackText(e.target.value)}
+                      placeholder="e.g. Squad was punctual, drained and disinfected all 3 overhead tanks..."
+                      className="w-full text-xs p-3 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:border-teal-600 focus:bg-white resize-none text-slate-800"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-200">
+                    <span className="font-bold text-slate-700 flex items-center gap-1.5">
+                      <ThumbsUp className="w-4 h-4 text-teal-600" />
+                      <span>Recommend Squad for Next AMC?</span>
+                    </span>
+                    <div className="flex gap-1 bg-slate-200 p-0.5 rounded-xl">
+                      <button
+                        type="button"
+                        onClick={() => setCommunityRecommended(true)}
+                        className={`px-3 py-1 rounded-lg font-bold text-xs transition cursor-pointer ${
+                          communityRecommended ? 'bg-teal-700 text-white' : 'text-slate-600'
+                        }`}
+                      >
+                        Yes 👍
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCommunityRecommended(false)}
+                        className={`px-3 py-1 rounded-lg font-bold text-xs transition cursor-pointer ${
+                          !communityRecommended ? 'bg-rose-600 text-white' : 'text-slate-600'
+                        }`}
+                      >
+                        No
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              )}
+            </div>
+
+            {!communityFeedbackSubmitted && (
+              <div className="p-3.5 sm:p-4 bg-white border-t border-slate-100 flex-shrink-0">
+                <button
+                  type="submit"
+                  form="comm-feedback-form"
+                  className="w-full bg-teal-700 hover:bg-teal-800 text-white font-black py-3.5 rounded-2xl shadow-lg transition text-sm flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Star className="w-4 h-4 fill-white" />
+                  <span>Submit Society Review</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

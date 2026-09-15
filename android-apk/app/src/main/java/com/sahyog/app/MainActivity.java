@@ -49,8 +49,10 @@ public class MainActivity extends AppCompatActivity {
 
         prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
 
-        // Always ensure the URL points directly to the customer dashboard (Home Screen)
-        prefs.edit().putString(KEY_SERVER_URL, DEFAULT_URL).apply();
+        // Only set default URL if not yet initialized
+        if (!prefs.contains(KEY_SERVER_URL)) {
+            prefs.edit().putString(KEY_SERVER_URL, DEFAULT_URL).apply();
+        }
 
         swipeRefresh = findViewById(R.id.swipeRefresh);
         webView = findViewById(R.id.webView);
@@ -61,7 +63,13 @@ public class MainActivity extends AppCompatActivity {
         errorText = findViewById(R.id.errorText);
 
         swipeRefresh.setColorSchemeColors(0xFF0D9488, 0xFF059669);
-        swipeRefresh.setOnRefreshListener(() -> loadAppUrl());
+        swipeRefresh.setOnRefreshListener(() -> {
+            if (webView.getUrl() != null && !webView.getUrl().isEmpty()) {
+                webView.reload();
+            } else {
+                loadAppUrl();
+            }
+        });
 
         WebSettings webSettings = webView.getSettings();
         webSettings.setJavaScriptEnabled(true);
@@ -135,6 +143,11 @@ public class MainActivity extends AppCompatActivity {
                 if (!url.contains("vercel.com/login")) {
                     errorLayout.setVisibility(View.GONE);
                     webView.setVisibility(View.VISIBLE);
+                    // Remember the last active page URL so refreshing or relaunching restores this exact screen
+                    if (url.contains("shayog-rb55.vercel.app")) {
+                        prefs.edit().putString(KEY_SERVER_URL, url).apply();
+                        urlInput.setText(url);
+                    }
                 } else {
                     view.loadUrl(DEFAULT_URL);
                 }
@@ -170,13 +183,9 @@ public class MainActivity extends AppCompatActivity {
 
 
     private void loadAppUrl() {
-        String targetUrl = DEFAULT_URL;
-        String savedUrl = prefs.getString(KEY_SERVER_URL, DEFAULT_URL);
-        if (savedUrl != null && savedUrl.contains("shayog-rb55.vercel.app") && savedUrl.contains("/customer/dashboard")) {
-            targetUrl = savedUrl;
-        } else {
+        String targetUrl = prefs.getString(KEY_SERVER_URL, DEFAULT_URL);
+        if (targetUrl == null || !targetUrl.contains("shayog-rb55.vercel.app")) {
             targetUrl = DEFAULT_URL;
-            prefs.edit().putString(KEY_SERVER_URL, DEFAULT_URL).apply();
         }
         urlInput.setText(targetUrl);
         errorLayout.setVisibility(View.GONE);

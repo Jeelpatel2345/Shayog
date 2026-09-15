@@ -132,7 +132,8 @@ export default function LoginPage() {
         const isLoggedIn = localStorage.getItem('sahyog-logged-in') === 'true';
         if (isLoggedIn) {
           if (storedRole === 'WORKER') {
-            router.replace('/worker/dashboard');
+            const isCommunity = localStorage.getItem('sahyog_worker_mode') === 'COMMUNITY';
+            router.replace(isCommunity ? '/worker/community' : '/worker/dashboard');
             return;
           } else if (storedRole === 'ADMIN') {
             router.replace('/admin/overview');

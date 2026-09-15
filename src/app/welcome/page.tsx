@@ -18,7 +18,8 @@ export default function WelcomePage() {
       const role = localStorage.getItem('sahyog-role');
       if (isLoggedIn && role) {
         if (role === 'WORKER') {
-          router.replace('/worker/dashboard');
+          const isCommunity = localStorage.getItem('sahyog_worker_mode') === 'COMMUNITY';
+          router.replace(isCommunity ? '/worker/community' : '/worker/dashboard');
           return;
         } else if (role === 'ADMIN') {
           router.replace('/admin/overview');
