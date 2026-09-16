@@ -33,16 +33,20 @@ export default function BottomNav({ role = 'customer' }: BottomNavProps) {
   const bookingsHref = effectiveRole === 'admin' 
     ? '/admin/bookings' 
     : effectiveRole === 'community_worker'
-      ? '/worker/community'
+      ? '/worker/community?tab=bookings'
       : effectiveRole === 'worker'
         ? '/worker/bookings'
         : '/customer/bookings';
 
-  const chatHref = effectiveRole === 'worker' ? '/chat/1?role=worker' : '/chat/ai';
+  const chatHref = effectiveRole === 'community_worker'
+    ? '/worker/community?tab=chat'
+    : effectiveRole === 'worker' 
+      ? '/chat/1?role=worker' 
+      : '/chat/ai';
 
-  const isHome = pathname === homeHref;
-  const isBookings = pathname.includes('/bookings') || pathname.includes('/tracking');
-  const isChat = pathname.startsWith('/chat');
+  const isHome = pathname === homeHref && (!pathname.includes('?') || pathname === '/worker/community');
+  const isBookings = pathname.includes('/bookings') || pathname.includes('tab=bookings') || pathname.includes('/tracking');
+  const isChat = pathname.startsWith('/chat') || pathname.includes('tab=chat');
   const isProfile = pathname.startsWith('/profile') || (effectiveRole === 'admin' && pathname === '/admin/users');
 
   return (
@@ -65,7 +69,7 @@ export default function BottomNav({ role = 'customer' }: BottomNavProps) {
             <Calendar className={`w-5 h-5 ${isBookings ? 'stroke-[2.5]' : ''}`} />
           </div>
           <span className={`text-[10px] mt-0.5 font-bold transition-all ${isBookings ? 'text-emerald-800' : 'text-slate-400'}`}>
-            Bookings
+            {effectiveRole === 'community_worker' ? 'Squad Tasks' : 'Bookings'}
           </span>
           {isBookings && <span className="w-1 h-1 bg-emerald-600 rounded-full mt-0.5" />}
         </Link>
@@ -76,7 +80,7 @@ export default function BottomNav({ role = 'customer' }: BottomNavProps) {
             <div className={`p-1 rounded-xl transition-all duration-200 ${isChat ? 'bg-emerald-50 text-emerald-700' : 'text-slate-400 group-hover:text-slate-600'}`}>
               <MessageSquare className={`w-5 h-5 ${isChat ? 'stroke-[2.5]' : ''}`} />
             </div>
-            {effectiveRole === 'worker' ? (
+            {effectiveRole === 'worker' || effectiveRole === 'community_worker' ? (
               <span className="absolute -top-1 -right-2 bg-emerald-600 text-white text-[9px] font-black rounded-full h-3.5 min-w-3.5 px-1 flex items-center justify-center shadow-xs">
                 1
               </span>
@@ -87,7 +91,7 @@ export default function BottomNav({ role = 'customer' }: BottomNavProps) {
             )}
           </div>
           <span className={`text-[10px] mt-0.5 font-bold transition-all ${isChat ? 'text-emerald-800' : 'text-slate-400'}`}>
-            {effectiveRole === 'worker' ? 'Customer Chat' : 'Chat'}
+            {effectiveRole === 'community_worker' ? 'Society Chat' : effectiveRole === 'worker' ? 'Customer Chat' : 'Chat'}
           </span>
           {isChat && <span className="w-1 h-1 bg-emerald-600 rounded-full mt-0.5" />}
         </Link>

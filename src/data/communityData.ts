@@ -94,6 +94,8 @@ export interface CommunityBooking {
   ordererPhone: string;
   poolSharePerWorker: number;
   createdAt: string;
+  societyAddress?: string;
+  paymentStatus?: string;
 }
 
 export const communityWorkerTypeOptions = [

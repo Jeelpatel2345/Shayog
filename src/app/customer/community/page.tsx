@@ -242,7 +242,10 @@ export default function CustomerCommunityDashboard() {
       const channel = new BroadcastChannel('sahyog-realtime-sync');
       channel.postMessage({
         type: 'NEW_COMMUNITY_BOOKING',
+        bookingId: bookingId,
         societyName: selectedSociety.name,
+        packageTitle: bookingModalPkg.title,
+        workerShare: Math.round(bookingModalPkg.discountedRateINR / bookingModalPkg.crewSize),
         timestamp: Date.now()
       });
       channel.close();
@@ -251,7 +254,10 @@ export default function CustomerCommunityDashboard() {
     if (typeof window !== 'undefined') {
       localStorage.setItem('sahyog-realtime-event', JSON.stringify({
         type: 'NEW_COMMUNITY_BOOKING',
+        bookingId: bookingId,
         societyName: selectedSociety.name,
+        packageTitle: bookingModalPkg.title,
+        workerShare: Math.round(bookingModalPkg.discountedRateINR / bookingModalPkg.crewSize),
         timestamp: Date.now()
       }));
     }

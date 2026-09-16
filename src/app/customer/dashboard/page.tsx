@@ -526,6 +526,8 @@ export default function CustomerDashboard() {
               type: 'NEW_COMMUNITY_BOOKING',
               bookingId: data.booking.id,
               societyName: selectedSociety.name,
+              packageTitle: bookingModalPkg?.title || 'Society Squad Service',
+              workerShare: Math.round(bookingModalPkg.discountedRateINR / bookingModalPkg.crewSize),
               timestamp: Date.now()
             });
             channel.close();
@@ -535,6 +537,8 @@ export default function CustomerDashboard() {
             type: 'NEW_COMMUNITY_BOOKING',
             bookingId: data.booking.id,
             societyName: selectedSociety.name,
+            packageTitle: bookingModalPkg?.title || 'Society Squad Service',
+            workerShare: Math.round(bookingModalPkg.discountedRateINR / bookingModalPkg.crewSize),
             timestamp: Date.now()
           }));
         }

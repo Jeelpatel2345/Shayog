@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   ArrowLeft, Bell, CheckCircle2, ShieldCheck, Tag, Clock, 
@@ -70,6 +70,34 @@ const initialNotifications: NotificationItem[] = [
 export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<NotificationItem[]>(initialNotifications);
   const [filter, setFilter] = useState<'all' | 'booking' | 'security' | 'offer'>('all');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('sahyog_notifications');
+        if (stored) {
+          const list = JSON.parse(stored);
+          if (Array.isArray(list) && list.length > 0) {
+            const mapped = list.map((item: any) => ({
+              id: item.id || 'notif_' + Math.random(),
+              type: item.type || 'booking',
+              title: item.title || 'New Alert',
+              desc: item.message || item.desc || '',
+              time: item.time || 'Just now',
+              read: item.read ?? false,
+              actionUrl: item.actionUrl || (item.title.includes('Society') ? '/worker/community' : '/worker/dashboard'),
+              actionLabel: item.title.includes('Society') ? 'View Squad Task' : 'View Booking'
+            }));
+            setNotifications((prev) => {
+              const ids = new Set(mapped.map((x: any) => x.id));
+              const rest = prev.filter((p) => !ids.has(p.id));
+              return [...mapped, ...rest];
+            });
+          }
+        }
+      } catch {}
+    }
+  }, []);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 

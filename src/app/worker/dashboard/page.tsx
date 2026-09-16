@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import RealTrackingMap from '@/components/RealTrackingMap';
 import BottomNav from '@/components/BottomNav';
+import { triggerSystemNotification, requestNotificationPermission } from '@/utils/realtimeNotification';
 
 export default function WorkerDashboard() {
   const router = useRouter();
@@ -67,6 +68,7 @@ export default function WorkerDashboard() {
       localStorage.setItem('sahyog_worker_mode', 'INDIVIDUAL');
       localStorage.setItem('sahyog-role', 'WORKER');
       localStorage.setItem('sahyog-logged-in', 'true');
+      requestNotificationPermission();
 
       const currentWorkerName = localStorage.getItem('sahyog-user-name') || 'Sunita Mehra';
       const currentWorkerPhone = localStorage.getItem('sahyog-user-phone') || '';
@@ -209,6 +211,13 @@ export default function WorkerDashboard() {
             setActiveJobStatus('ON THE WAY');
             setToastNotice(`🔔 New Booking Received from ${b.customerName || 'Customer'}!`);
             setTimeout(() => setToastNotice(''), 6000);
+
+            // Trigger real OS system notification with sound chime & vibration!
+            triggerSystemNotification(`🔔 New Home Service Booking!`, {
+              body: `${b.customerName || 'Customer'} booked ${b.serviceTitle || 'Home Service'} (₹${b.totalAmount || 500}). Tap to view!`,
+              url: '/worker/dashboard',
+              tag: 'booking-' + (b.id || Date.now())
+            });
           }
         }
       };
