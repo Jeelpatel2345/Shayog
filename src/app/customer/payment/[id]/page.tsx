@@ -169,7 +169,7 @@ function PaymentContent({ params }: { params: { id: string } }) {
   return (
     <div className="min-h-screen bg-slate-50 pb-36 sm:pb-32 text-slate-900">
       {/* Top Header */}
-      <div className="bg-[#042f2e] text-white border-b border-emerald-900/60 sticky top-0 z-30 shadow-md">
+      <div className="bg-[#0f3854] text-white border-b border-emerald-900/60 sticky top-0 z-30 shadow-md">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
@@ -222,7 +222,7 @@ function PaymentContent({ params }: { params: { id: string } }) {
 
       <div className="max-w-3xl mx-auto px-3 sm:px-6 pt-4 sm:pt-6 space-y-5">
         {/* Booking Summary Card */}
-        <div className="bg-gradient-to-br from-[#042f2e] via-[#0d9488] to-[#059669] text-white rounded-3xl p-5 sm:p-7 shadow-lg relative overflow-hidden">
+        <div className="bg-gradient-to-br from-[#0f3854] via-[#0d9488] to-[#059669] text-white rounded-3xl p-5 sm:p-7 shadow-lg relative overflow-hidden">
           <div className="absolute top-0 right-0 w-40 h-40 bg-white/5 rounded-full -mr-10 -mt-10 pointer-events-none" />
           
           <div className="flex items-center justify-between text-xs font-semibold text-emerald-100 mb-2">

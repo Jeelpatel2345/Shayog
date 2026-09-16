@@ -67,7 +67,7 @@ function BookingContent({ params }: { params: { id: string } }) {
   return (
     <div className="min-h-screen bg-slate-50 pb-32 text-slate-900">
       {/* Top Header */}
-      <div className="bg-[#042f2e] text-white border-b border-emerald-900/60 sticky top-0 z-30 shadow-md">
+      <div className="bg-[#0f3854] text-white border-b border-emerald-900/60 sticky top-0 z-30 shadow-md">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link

@@ -404,7 +404,7 @@ export default function LoginPage() {
 
       <div className="w-full max-w-4xl bg-white md:rounded-3xl md:shadow-2xl overflow-hidden md:border md:border-slate-200 grid grid-cols-1 md:grid-cols-2 min-h-[580px]">
         {/* Left Hero & Security Banner */}
-        <div className="bg-gradient-to-br from-[#042f2e] via-[#0d9488] to-[#042f2e] text-white p-6 sm:p-8 flex flex-col justify-between relative overflow-hidden">
+        <div className="bg-gradient-to-br from-[#0f3854] via-[#0d9488] to-[#16a34a] text-white p-6 sm:p-8 flex flex-col justify-between relative overflow-hidden">
           <div className="relative z-10">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">

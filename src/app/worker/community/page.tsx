@@ -209,7 +209,7 @@ export default function WorkerCommunityDashboard() {
   return (
     <div className="min-h-screen bg-slate-50 pb-32 text-slate-900">
       {/* Locked Community Squad Top Bar */}
-      <div className="bg-[#042f2e] text-white p-4 sticky top-0 z-30 shadow-md border-b border-teal-800">
+      <div className="bg-[#0f3854] text-white p-4 sticky top-0 z-30 shadow-md border-b border-teal-800">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-amber-400 text-teal-950 font-black text-base flex items-center justify-center shadow-md">
@@ -266,7 +266,7 @@ export default function WorkerCommunityDashboard() {
         </div>
 
         {/* 1. Active Society Job Card */}
-        <div className="bg-gradient-to-br from-[#042f2e] via-[#0f766e] to-[#042f2e] text-white rounded-3xl p-5 sm:p-7 shadow-xl border border-teal-800/50 space-y-5">
+        <div className="bg-gradient-to-br from-[#0f3854] via-[#0f766e] to-[#0f3854] text-white rounded-3xl p-5 sm:p-7 shadow-xl border border-teal-800/50 space-y-5">
           <div className="flex items-center justify-between border-b border-white/10 pb-3">
             <span className="text-[11px] font-black uppercase text-amber-300 tracking-wider flex items-center gap-1.5">
               <Building2 className="w-4 h-4" />

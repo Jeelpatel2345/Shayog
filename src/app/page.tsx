@@ -50,7 +50,7 @@ export default function RootPage() {
   }, [router]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#042f2e] via-[#064e3b] to-[#042f2e] flex flex-col items-center justify-between text-white p-6 select-none">
+    <div className="min-h-screen bg-gradient-to-b from-[#0f3854] via-[#0d9488] to-[#0f3854] flex flex-col items-center justify-between text-white p-6 select-none">
       {/* Top Tag */}
       <div className="pt-8 flex items-center gap-1.5 text-xs font-bold text-emerald-300/80 tracking-widest uppercase">
         <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-spin" />
@@ -67,7 +67,7 @@ export default function RootPage() {
               className="w-20 h-20 rounded-full object-cover shadow-inner" 
             />
           </div>
-          <span className="absolute bottom-0 right-0 w-6 h-6 bg-amber-400 text-emerald-950 rounded-full flex items-center justify-center font-black text-xs border-2 border-[#042f2e] shadow-md">
+          <span className="absolute bottom-0 right-0 w-6 h-6 bg-amber-400 text-emerald-950 rounded-full flex items-center justify-center font-black text-xs border-2 border-[#0f3854] shadow-md">
             ✓
           </span>
         </div>

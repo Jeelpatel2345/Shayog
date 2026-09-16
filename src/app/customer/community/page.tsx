@@ -167,8 +167,33 @@ export default function CustomerCommunityDashboard() {
     setSelectedUpiApp('gpay');
   };
 
-  const handleProcessPayment = async () => {
+  const handleProcessPayment = async (schemeAppOverride?: string) => {
     if (!bookingModalPkg) return;
+
+    const chosenApp = schemeAppOverride || selectedUpiApp;
+    if (schemeAppOverride) setSelectedUpiApp(schemeAppOverride as any);
+
+    // 1. TRIGGER REAL UPI PAYMENT APP ON USER'S PHONE (Google Pay, PhonePe, Paytm, BHIM)
+    const upiSchemeMap: Record<string, string> = {
+      gpay: 'tez://upi/pay',
+      phonepe: 'phonepe://pay',
+      paytm: 'paytmmp://pay',
+      bhim: 'upi://pay'
+    };
+    const schemePrefix = upiSchemeMap[chosenApp] || 'upi://pay';
+    const commBookingCode = 'COMM-' + Date.now().toString().slice(-4);
+    const amount = bookingModalPkg.discountedRateINR;
+    const upiId = 'sahyogtrust@upi';
+    const upiIntentUrl = `${schemePrefix}?pa=${upiId}&pn=SahYog%20Community&mc=0000&tid=TX${Date.now().toString().slice(-6)}&tr=${commBookingCode}&tn=SahYog%20Community%20Squad%20Booking&am=${amount}&cu=INR`;
+
+    if (selectedPaymentMethod === 'UPI') {
+      try {
+        window.location.href = upiIntentUrl;
+      } catch (err) {
+        console.warn('UPI app launch note:', err);
+      }
+    }
+
     setCheckoutStep('PROCESSING');
 
     const newOtp = String(Math.floor(1000 + Math.random() * 9000));
@@ -288,7 +313,7 @@ export default function CustomerCommunityDashboard() {
   return (
     <div className="min-h-screen bg-slate-50 pb-32 text-slate-900">
       {/* Sticky Mobile Header */}
-      <div className="bg-[#042f2e] text-white p-4 sticky top-0 z-30 shadow-md">
+      <div className="bg-[#0f3854] text-white p-4 sticky top-0 z-30 shadow-md">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
@@ -389,7 +414,7 @@ export default function CustomerCommunityDashboard() {
 
         {/* 2. Active Multi-Worker Squad Card */}
         {activeBooking && (
-          <div className="bg-gradient-to-br from-[#042f2e] via-[#0f766e] to-[#042f2e] text-white rounded-3xl p-5 sm:p-6 shadow-xl border border-teal-800/50 space-y-5">
+          <div className="bg-gradient-to-br from-[#0f3854] via-[#0f766e] to-[#0f3854] text-white rounded-3xl p-5 sm:p-6 shadow-xl border border-teal-800/50 space-y-5">
             <div className="flex items-center justify-between border-b border-white/10 pb-3">
               <div className="flex items-center gap-2">
                 <Truck className="w-5 h-5 text-amber-300 animate-bounce" />
@@ -756,6 +781,41 @@ export default function CustomerCommunityDashboard() {
                       </div>
                     </button>
                   </div>
+
+                  {/* Direct Mobile UPI Apps */}
+                  {selectedPaymentMethod === 'UPI' && (
+                    <div className="mt-3 space-y-2 p-3 bg-slate-50 rounded-2xl border border-slate-200">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-black uppercase text-slate-700 block">Tap App to Pay Directly:</span>
+                        <span className="text-[10px] text-emerald-700 font-bold">Opens Real App on Phone</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { id: 'gpay', name: 'Google Pay', badge: 'Popular', color: 'border-blue-300 text-blue-900 bg-white hover:bg-blue-50' },
+                          { id: 'phonepe', name: 'PhonePe', badge: 'Instant', color: 'border-purple-300 text-purple-900 bg-white hover:bg-purple-50' },
+                          { id: 'paytm', name: 'Paytm UPI', badge: 'Fast', color: 'border-sky-300 text-sky-900 bg-white hover:bg-sky-50' },
+                          { id: 'bhim', name: 'BHIM / CRED', badge: 'Universal', color: 'border-emerald-300 text-emerald-900 bg-white hover:bg-emerald-50' }
+                        ].map((app) => (
+                          <button
+                            key={app.id}
+                            type="button"
+                            onClick={() => handleProcessPayment(app.id)}
+                            className={`p-2.5 rounded-xl border text-left cursor-pointer transition flex items-center justify-between ${app.color} ${
+                              selectedUpiApp === app.id ? 'ring-2 ring-teal-600 font-black shadow-xs' : 'font-bold'
+                            }`}
+                          >
+                            <div>
+                              <p className="text-xs font-black">{app.name}</p>
+                              <span className="text-[9px] text-slate-500 font-medium">Launch App ↗</span>
+                            </div>
+                            <span className="text-[9px] font-black bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded">
+                              {app.badge}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex gap-2 pt-2">
@@ -833,7 +893,7 @@ export default function CustomerCommunityDashboard() {
         <div className="fixed inset-0 z-[115] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200 overflow-y-auto">
           <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 animate-in zoom-in-95 flex flex-col max-h-[85vh] my-auto">
             {/* Header */}
-            <div className="bg-gradient-to-r from-[#042f2e] via-[#0d9488] to-[#042f2e] text-white p-4 sm:p-5 relative flex-shrink-0">
+            <div className="bg-gradient-to-r from-[#0f3854] via-[#0d9488] to-[#16a34a] text-white p-4 sm:p-5 relative flex-shrink-0">
               <button
                 type="button"
                 onClick={() => setIsCommunityFeedbackOpen(false)}

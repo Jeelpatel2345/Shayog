@@ -177,24 +177,27 @@ export default function CustomerDashboard() {
         setRealtimeToast('⚡ Partner Arrived! Service job is now IN PROGRESS.');
         setTimeout(() => setRealtimeToast(''), 5000);
       } else if (data.type === 'JOB_COMPLETED') {
-        const userBkId = localStorage.getItem('sahyog-active-booking-id');
-        // STRICT: Only pop up feedback if this customer actually has an active booking that completed!
-        if (userBkId && (!data.bookingId || data.bookingId === userBkId)) {
-          const isRated = localStorage.getItem('sahyog-rated-' + userBkId) === 'true';
-          if (!isRated) {
-            setLiveJobStatus('COMPLETED');
-            if (data.workerName) {
-              setRatedWorker(prev => ({
-                ...prev,
-                name: data.workerName,
-                service: data.service || prev.service,
-                completedDate: 'Completed Just Now'
-              }));
-            }
-            setIsFeedbackOpen(true);
-            setRealtimeToast('🎉 Service Completed! Please share your rating.');
-            setTimeout(() => setRealtimeToast(''), 6000);
+        const userBkId = data.bookingId || localStorage.getItem('sahyog-active-booking-id');
+        const isRated = userBkId ? localStorage.getItem('sahyog-rated-' + userBkId) === 'true' : false;
+
+        if (!isRated) {
+          if (data.bookingId) {
+            setActiveBookingId(data.bookingId);
+            localStorage.setItem('sahyog-active-booking-id', data.bookingId);
           }
+          setLiveJobStatus('COMPLETED');
+          if (data.workerName) {
+            setRatedWorker(prev => ({
+              ...prev,
+              id: data.workerId || prev.id,
+              name: data.workerName,
+              service: data.service || prev.service,
+              completedDate: 'Completed Just Now'
+            }));
+          }
+          setIsFeedbackOpen(true);
+          setRealtimeToast(`🎉 Service Completed by ${data.workerName || 'Partner'}! Please share your rating.`);
+          setTimeout(() => setRealtimeToast(''), 6000);
         }
       } else if (data.type === 'COMMUNITY_JOB_STARTED') {
         setActiveCommunityBooking(prev => ({
@@ -208,7 +211,7 @@ export default function CustomerDashboard() {
           ...prev,
           status: 'COMPLETED'
         }));
-        const commBkId = localStorage.getItem('sahyog_active_community_booking_id');
+        const commBkId = data.bookingId || localStorage.getItem('sahyog_active_community_booking_id') || activeCommunityBooking.id;
         const isCommRated = commBkId ? localStorage.getItem('sahyog-community-rated-' + commBkId) === 'true' : false;
         if (!isCommRated) {
           setIsCommunityFeedbackOpen(true);
@@ -452,9 +455,34 @@ export default function CustomerDashboard() {
     setSelectedUpiApp('gpay');
   };
 
-  const handleProcessCommunityPayment = async (e?: React.FormEvent) => {
+  const handleProcessCommunityPayment = async (schemeAppOverride?: string, e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (!bookingModalPkg) return;
+
+    const chosenApp = schemeAppOverride || selectedUpiApp;
+    if (schemeAppOverride) setSelectedUpiApp(schemeAppOverride as any);
+
+    // 1. TRIGGER REAL UPI PAYMENT APP ON USER'S PHONE (Google Pay, PhonePe, Paytm, BHIM)
+    const upiSchemeMap: Record<string, string> = {
+      gpay: 'tez://upi/pay',
+      phonepe: 'phonepe://pay',
+      paytm: 'paytmmp://pay',
+      bhim: 'upi://pay'
+    };
+    const schemePrefix = upiSchemeMap[chosenApp] || 'upi://pay';
+    const commBookingCode = 'COMM-' + Date.now().toString().slice(-4);
+    const amount = bookingModalPkg.discountedRateINR;
+    const upiId = customUpiId.trim() || 'sahyogtrust@upi';
+    const upiIntentUrl = `${schemePrefix}?pa=${upiId}&pn=SahYog%20Community&mc=0000&tid=TX${Date.now().toString().slice(-6)}&tr=${commBookingCode}&tn=SahYog%20Community%20Squad%20Booking&am=${amount}&cu=INR`;
+
+    if (selectedPaymentMethod === 'UPI') {
+      try {
+        window.location.href = upiIntentUrl;
+      } catch (err) {
+        console.warn('UPI app launch note:', err);
+      }
+    }
+
     setCheckoutStep('PROCESSING');
 
     const newOtp = String(Math.floor(1000 + Math.random() * 9000));
@@ -558,25 +586,45 @@ export default function CustomerDashboard() {
   // Top featured workers from dynamic list
   const featuredWorkers = liveWorkers.slice(0, 4);
 
-  // Real-time dynamic search results
+  // Real-time dynamic global search across Workers, Societies/Communities, and Squads
   const query = searchQuery.trim().toLowerCase();
+
+  // Matched Service Professionals (seeded + dynamic API + local registered)
   const searchResultsWorkers = query
     ? liveWorkers.filter(
         (w: any) =>
           w.name.toLowerCase().includes(query) ||
           w.title.toLowerCase().includes(query) ||
           w.category.toLowerCase().includes(query) ||
-          (w.skills && Array.isArray(w.skills) && w.skills.some((s: string) => s.toLowerCase().includes(query)))
+          (w.skills && Array.isArray(w.skills) && w.skills.some((s: string) => s.toLowerCase().includes(query))) ||
+          (w.city && w.city.toLowerCase().includes(query)) ||
+          (w.society && w.society.toLowerCase().includes(query))
       )
     : [];
 
+  // Matched Housing Societies & Communities (Gokuldham, Nilkanth, Shanti Heights, etc.)
+  const searchResultsSocieties = query
+    ? registeredSocieties.filter(
+        (soc: Society) =>
+          soc.name.toLowerCase().includes(query) ||
+          soc.shortName.toLowerCase().includes(query) ||
+          soc.locality.toLowerCase().includes(query) ||
+          soc.city.toLowerCase().includes(query) ||
+          soc.communityType.toLowerCase().includes(query) ||
+          soc.managerName.toLowerCase().includes(query) ||
+          (soc.availableWorkerTypes && soc.availableWorkerTypes.some((wt: string) => wt.toLowerCase().includes(query)))
+      )
+    : [];
+
+  // Matched Community Squad Packages
   const searchResultsCommunity = query
     ? communityPackages.filter(
         (p: any) =>
           p.title.toLowerCase().includes(query) ||
           p.tradeCategory.toLowerCase().includes(query) ||
+          p.leadWorkerName.toLowerCase().includes(query) ||
           p.scopePoints.some((s: string) => s.toLowerCase().includes(query)) ||
-          'community society squad tank cleaning'.includes(query)
+          'community society squad tank cleaning amc maintenance'.includes(query)
       )
     : [];
 
@@ -603,7 +651,7 @@ export default function CustomerDashboard() {
   return (
     <div className="w-full min-h-screen bg-slate-50 pb-32 sm:pb-28 text-slate-900">
       {/* Desktop Top Navbar */}
-      <header className="hidden md:block bg-[#042f2e] border-b border-emerald-900/50 sticky top-0 z-30 shadow-md">
+      <header className="hidden md:block bg-[#0f3854] border-b border-emerald-900/50 sticky top-0 z-30 shadow-md">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src="/logo.png" alt="SahYog" className="w-9 h-9 rounded-full object-cover shadow-md" />
@@ -664,7 +712,7 @@ export default function CustomerDashboard() {
       {/* Main Container */}
       <div className="max-w-6xl mx-auto px-3 sm:px-6 lg:px-8 pt-2 sm:pt-6 space-y-6">
         {/* Top App Header with Rich Emerald Gradient */}
-        <div className="bg-gradient-to-r from-[#042f2e] via-[#0d9488] to-[#0f766e] text-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-3xl shadow-lg relative overflow-hidden">
+        <div className="bg-gradient-to-r from-[#0f3854] via-[#0d9488] to-[#0f766e] text-white p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-3xl shadow-lg relative overflow-hidden">
           {/* Mobile top bar */}
           <div className="md:hidden flex items-center justify-between pb-3 border-b border-white/10">
             <div className="flex items-center gap-2">
@@ -797,7 +845,52 @@ export default function CustomerDashboard() {
                 </button>
               </div>
 
-              {/* Workers matching name/skills */}
+              {/* 1. Housing Societies & Communities matching query */}
+              {searchResultsSocieties.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-[11px] font-black uppercase text-teal-800 tracking-wider flex items-center gap-1.5">
+                    <Building2 className="w-3.5 h-3.5 text-teal-600" />
+                    <span>Matched Communities & Housing Societies ({searchResultsSocieties.length})</span>
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {searchResultsSocieties.slice(0, 4).map((soc: any) => (
+                      <div
+                        key={soc.id}
+                        className="p-3 rounded-2xl border border-teal-200 bg-teal-50/40 hover:bg-teal-50/80 transition flex items-center justify-between shadow-xs"
+                      >
+                        <div className="min-w-0 flex-1 pr-2">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[9px] font-black bg-[#0f3854] text-white px-1.5 py-0.2 rounded-full">
+                              {soc.totalFlats} FLATS
+                            </span>
+                            <span className="text-[9px] text-teal-700 font-bold truncate">
+                              {soc.communityType}
+                            </span>
+                          </div>
+                          <p className="text-xs font-black text-slate-900 mt-1 truncate">{soc.name}</p>
+                          <p className="text-[10px] text-slate-500 truncate">{soc.locality}, {soc.city}</p>
+                          <p className="text-[10px] text-teal-800 font-medium mt-0.5">Manager: {soc.managerName}</p>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedSociety(soc);
+                              setServiceMode('COMMUNITY');
+                              setSearchQuery('');
+                            }}
+                            className="bg-gradient-to-r from-[#0d9488] to-[#16a34a] hover:opacity-90 text-white text-[10px] font-black px-2.5 py-1.5 rounded-xl transition shadow-xs cursor-pointer whitespace-nowrap"
+                          >
+                            Select Society →
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* 2. Workers matching name/skills */}
               {searchResultsWorkers.length > 0 && (
                 <div className="space-y-2">
                   <p className="text-[11px] font-black uppercase text-teal-800 tracking-wider flex items-center gap-1.5">
@@ -879,9 +972,9 @@ export default function CustomerDashboard() {
                 </div>
               )}
 
-              {searchResultsWorkers.length === 0 && searchResultsCommunity.length === 0 && (
+              {searchResultsWorkers.length === 0 && searchResultsCommunity.length === 0 && searchResultsSocieties.length === 0 && (
                 <div className="py-4 text-center text-xs text-slate-500">
-                  No partners found matching &ldquo;{searchQuery}&rdquo;. Try another name or specialty.
+                  No partners or communities found matching &ldquo;{searchQuery}&rdquo;. Try searching by worker name, specialty, or society name (e.g. Gokuldham, Nilkanth, Shanti).
                 </div>
               )}
             </div>
@@ -1151,7 +1244,7 @@ export default function CustomerDashboard() {
             )}
 
             {/* Active Squad Live Status & Gate Arrival OTP Card */}
-            <div className="bg-gradient-to-br from-[#042f2e] via-[#0f766e] to-[#042f2e] text-white rounded-3xl p-5 sm:p-6 shadow-xl border border-teal-700/60 relative overflow-hidden w-full min-w-0">
+            <div className="bg-gradient-to-br from-[#0f3854] via-[#0d9488] to-[#16a34a] text-white rounded-3xl p-5 sm:p-6 shadow-xl border border-teal-700/60 relative overflow-hidden w-full min-w-0">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="space-y-1.5 min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
@@ -1644,7 +1737,7 @@ export default function CustomerDashboard() {
         <div className="fixed inset-0 z-[100] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200 overflow-y-auto">
           <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh] sm:max-h-[88vh] my-auto">
             {/* Modal Header (Fixed at top) */}
-            <div className="bg-gradient-to-r from-[#042f2e] via-[#0d9488] to-[#042f2e] text-white p-4 sm:p-5 relative flex-shrink-0">
+            <div className="bg-gradient-to-r from-[#0f3854] via-[#0d9488] to-[#16a34a] text-white p-4 sm:p-5 relative flex-shrink-0">
               <button
                 type="button"
                 onClick={() => setIsFeedbackOpen(false)}
@@ -1821,7 +1914,7 @@ export default function CustomerDashboard() {
         <div className="fixed inset-0 z-[105] bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh] my-auto">
             {/* Header */}
-            <div className="bg-gradient-to-r from-[#042f2e] via-[#0d9488] to-[#042f2e] text-white p-4 sm:p-5 relative flex-shrink-0">
+            <div className="bg-gradient-to-r from-[#0f3854] via-[#0d9488] to-[#16a34a] text-white p-4 sm:p-5 relative flex-shrink-0">
               <button
                 type="button"
                 onClick={() => setBookingModalPkg(null)}
@@ -2045,38 +2138,48 @@ export default function CustomerDashboard() {
                     </div>
                   </div>
 
-                  {/* Sub-inputs based on method */}
+                  {/* Sub-inputs based on method with direct mobile app triggers */}
                   {selectedPaymentMethod === 'UPI' && (
-                    <div className="space-y-2 p-3 bg-slate-50 rounded-2xl border border-slate-200">
-                      <span className="text-[11px] font-bold text-slate-700 block">Choose UPI App:</span>
-                      <div className="grid grid-cols-4 gap-1.5">
+                    <div className="space-y-2.5 p-3.5 bg-slate-50 rounded-2xl border border-slate-200">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-black uppercase text-slate-700 block">Tap UPI App to Pay Directly:</span>
+                        <span className="text-[10px] text-emerald-700 font-bold">Opens Real App on Phone</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
                         {[
-                          { id: 'gpay', name: 'Google Pay' },
-                          { id: 'phonepe', name: 'PhonePe' },
-                          { id: 'paytm', name: 'Paytm' },
-                          { id: 'bhim', name: 'BHIM UPI' }
+                          { id: 'gpay', name: 'Google Pay', badge: 'Popular', color: 'border-blue-300 text-blue-900 bg-white hover:bg-blue-50' },
+                          { id: 'phonepe', name: 'PhonePe', badge: 'Instant', color: 'border-purple-300 text-purple-900 bg-white hover:bg-purple-50' },
+                          { id: 'paytm', name: 'Paytm UPI', badge: 'Fast', color: 'border-sky-300 text-sky-900 bg-white hover:bg-sky-50' },
+                          { id: 'bhim', name: 'BHIM / CRED', badge: 'Universal', color: 'border-emerald-300 text-emerald-900 bg-white hover:bg-emerald-50' }
                         ].map((app) => (
                           <button
                             key={app.id}
                             type="button"
-                            onClick={() => setSelectedUpiApp(app.id as any)}
-                            className={`p-2 rounded-xl text-center border text-[10px] font-black cursor-pointer transition ${
-                              selectedUpiApp === app.id
-                                ? 'bg-teal-700 text-white border-teal-700'
-                                : 'bg-white text-slate-700 border-slate-200'
+                            onClick={() => handleProcessCommunityPayment(app.id)}
+                            className={`p-2.5 rounded-xl border text-left cursor-pointer transition flex items-center justify-between ${app.color} ${
+                              selectedUpiApp === app.id ? 'ring-2 ring-teal-600 font-black shadow-xs' : 'font-bold'
                             }`}
                           >
-                            {app.name}
+                            <div>
+                              <p className="text-xs font-black">{app.name}</p>
+                              <span className="text-[9px] text-slate-500 font-medium">Launch App ↗</span>
+                            </div>
+                            <span className="text-[9px] font-black bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded">
+                              {app.badge}
+                            </span>
                           </button>
                         ))}
                       </div>
-                      <input
-                        type="text"
-                        value={customUpiId}
-                        onChange={(e) => setCustomUpiId(e.target.value)}
-                        placeholder="Or Enter Society UPI ID (e.g. society@okhdfcbank)"
-                        className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-teal-600 mt-2 text-slate-900"
-                      />
+
+                      <div className="pt-1">
+                        <input
+                          type="text"
+                          value={customUpiId}
+                          onChange={(e) => setCustomUpiId(e.target.value)}
+                          placeholder="Or Enter Society VPA (e.g. society@okhdfcbank)"
+                          className="w-full p-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-teal-600 text-slate-900"
+                        />
+                      </div>
                     </div>
                   )}
 
@@ -2222,7 +2325,7 @@ export default function CustomerDashboard() {
         <div className="fixed inset-0 z-[115] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200 overflow-y-auto">
           <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200 flex flex-col max-h-[85vh] sm:max-h-[88vh] my-auto">
             {/* Header */}
-            <div className="bg-gradient-to-r from-[#042f2e] via-[#0d9488] to-[#042f2e] text-white p-4 sm:p-5 relative flex-shrink-0">
+            <div className="bg-gradient-to-r from-[#0f3854] via-[#0d9488] to-[#16a34a] text-white p-4 sm:p-5 relative flex-shrink-0">
               <button
                 type="button"
                 onClick={() => setIsCommunityFeedbackOpen(false)}
