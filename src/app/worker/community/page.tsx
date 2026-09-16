@@ -20,16 +20,32 @@ import {
 export default function WorkerCommunityDashboard() {
   const router = useRouter();
 
-  // Enforce Community Mode Lock
+  // STRICT COMMUNITY DASHBOARD LOCK:
+  // Community workers can ONLY see the Community Dashboard and never the individual worker dashboard.
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      const role = localStorage.getItem('sahyog-role');
+      const mode = localStorage.getItem('sahyog_worker_mode');
+      if (role === 'CUSTOMER') {
+        window.location.replace('/customer/dashboard');
+        return;
+      }
+      if (mode === 'INDIVIDUAL') {
+        window.location.replace('/worker/dashboard');
+        return;
+      }
       localStorage.setItem('sahyog_worker_mode', 'COMMUNITY');
       localStorage.setItem('sahyog-role', 'WORKER');
       localStorage.setItem('sahyog-logged-in', 'true');
     }
   }, []);
 
-  const [workerName, setWorkerName] = useState('Mahesh Barot');
+  const [workerName, setWorkerName] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('sahyog-user-name') || 'Jeel';
+    }
+    return 'Jeel';
+  });
   const [workerRoleInSquad, setWorkerRoleInSquad] = useState<'LEAD' | 'SPECIALIST'>('LEAD');
   const [activeBooking, setActiveBooking] = useState<CommunityBooking>(defaultActiveCommunityBooking);
   const [jobStatus, setJobStatus] = useState<'CREW_EN_ROUTE' | 'IN_PROGRESS' | 'COMPLETED'>('CREW_EN_ROUTE');
@@ -40,9 +56,6 @@ export default function WorkerCommunityDashboard() {
   const [otpError, setOtpError] = useState('');
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [toastNotice, setToastNotice] = useState('');
-
-  // Switch to Individual Mode Confirmation Modal
-  const [showExitConfirm, setShowExitConfirm] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -177,13 +190,6 @@ export default function WorkerCommunityDashboard() {
     }
   };
 
-  const handleExitCommunityMode = () => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('sahyog_worker_mode', 'INDIVIDUAL');
-      window.location.href = '/worker/dashboard';
-    }
-  };
-
   const handleLogout = async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
@@ -202,7 +208,7 @@ export default function WorkerCommunityDashboard() {
       localStorage.removeItem('sahyog-user-bookings');
       localStorage.removeItem('sahyog_squad_name');
       localStorage.removeItem('sahyog_society_name');
-      window.location.href = '/login';
+      window.location.href = '/login?role=worker';
     }
   };
 
@@ -228,21 +234,19 @@ export default function WorkerCommunityDashboard() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setShowExitConfirm(true)}
-              className="text-[11px] font-bold text-teal-200 hover:text-white px-3 py-1.5 rounded-xl border border-teal-700 hover:bg-teal-900/60 transition cursor-pointer"
-            >
-              Exit to Individual
-            </button>
+          <div className="flex items-center gap-2.5">
+            <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-300 bg-emerald-950/60 border border-emerald-500/40 px-2.5 py-1 rounded-full">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+              <span>Squad Active</span>
+            </span>
             <button
               type="button"
               onClick={handleLogout}
-              className="p-1.5 rounded-xl hover:bg-rose-900/50 text-rose-300 hover:text-rose-100 transition cursor-pointer"
+              className="flex items-center gap-1.5 text-xs font-bold bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 hover:text-white px-3 py-1.5 rounded-xl border border-rose-500/40 transition cursor-pointer"
               title="Log Out to Login Page"
             >
               <LogOut className="w-4 h-4" />
+              <span>Logout</span>
             </button>
           </div>
         </div>
@@ -261,7 +265,7 @@ export default function WorkerCommunityDashboard() {
         <div className="p-3.5 bg-teal-50 border border-teal-200 rounded-2xl flex items-center justify-between text-xs text-teal-900">
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-teal-700 flex-shrink-0" />
-            <span><b>Community Mode Active:</b> You are serving as a verified Society Squad partner. Individual private jobs are hidden to avoid scheduling conflicts.</span>
+            <span><b>Dedicated Community Squad Dashboard:</b> You are serving as a verified multi-worker Society Squad partner. Private individual jobs are segregated to this dedicated squad terminal.</span>
           </div>
         </div>
 
@@ -494,40 +498,7 @@ export default function WorkerCommunityDashboard() {
         </div>
       )}
 
-      {/* Exit Confirmation Modal */}
-      {showExitConfirm && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-slate-100 space-y-4 animate-in fade-in zoom-in-95 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto">
-              <Users className="w-6 h-6" />
-            </div>
 
-            <div>
-              <h3 className="font-black text-slate-900 text-base">Exit Community Squad Mode?</h3>
-              <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                You will leave the society multi-worker squad view and return to individual 1-on-1 private home visits.
-              </p>
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowExitConfirm(false)}
-                className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition cursor-pointer"
-              >
-                Stay in Squad
-              </button>
-              <button
-                type="button"
-                onClick={handleExitCommunityMode}
-                className="flex-1 py-3 bg-teal-700 hover:bg-teal-800 text-white font-black rounded-xl text-xs shadow-md transition cursor-pointer"
-              >
-                Yes, Return to Individual
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
   <BottomNav role="worker" />
     </div>

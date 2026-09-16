@@ -126,9 +126,14 @@ export default function WorkerBookingsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeDirectionsJob, setActiveDirectionsJob] = useState<JobBooking | null>(null);
 
-  // Lock Worker Role
+  // Lock Worker Role and redirect community workers to community dashboard
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      const mode = localStorage.getItem('sahyog_worker_mode');
+      if (mode === 'COMMUNITY') {
+        window.location.replace('/worker/community');
+        return;
+      }
       localStorage.setItem('sahyog-role', 'WORKER');
       localStorage.setItem('sahyog-logged-in', 'true');
     }

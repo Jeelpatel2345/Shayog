@@ -323,7 +323,8 @@ export default function LoginPage() {
           router.push('/worker/community');
           return;
         } else {
-          localStorage.removeItem('sahyog_worker_mode');
+          localStorage.setItem('sahyog_worker_mode', 'INDIVIDUAL');
+          localStorage.setItem('sahyog-service-scope', 'INDIVIDUAL');
           router.push('/worker/dashboard');
           return;
         }

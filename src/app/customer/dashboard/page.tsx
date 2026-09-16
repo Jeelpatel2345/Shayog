@@ -571,7 +571,8 @@ export default function CustomerDashboard() {
         .then((data) => {
           if (data?.user?.role === 'WORKER') {
             localStorage.setItem('sahyog-role', 'WORKER');
-            window.location.href = '/worker/dashboard';
+            const isCommunity = localStorage.getItem('sahyog_worker_mode') === 'COMMUNITY';
+            window.location.replace(isCommunity ? '/worker/community' : '/worker/dashboard');
             return;
           }
           if (data?.user?.fullName) {

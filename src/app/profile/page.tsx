@@ -140,7 +140,8 @@ export default function ProfilePage() {
       localStorage.removeItem('sahyog-user-bookings');
       localStorage.removeItem('sahyog_squad_name');
       localStorage.removeItem('sahyog_society_name');
-      window.location.href = '/login';
+      const isWorker = role === 'WORKER' || localStorage.getItem('sahyog-role') === 'WORKER';
+      window.location.href = isWorker ? '/login?role=worker' : '/login';
     }
   };
 
@@ -152,7 +153,8 @@ export default function ProfilePage() {
   const initials = getInitials(userName);
 
   const isWorker = role === 'WORKER' || (typeof window !== 'undefined' && localStorage.getItem('sahyog-role') === 'WORKER');
-  const backHref = isWorker ? '/worker/dashboard' : '/customer/dashboard';
+  const isCommunity = typeof window !== 'undefined' && localStorage.getItem('sahyog_worker_mode') === 'COMMUNITY';
+  const backHref = isWorker ? (isCommunity ? '/worker/community' : '/worker/dashboard') : '/customer/dashboard';
 
   return (
     <div className="min-h-screen bg-slate-50 pb-28 text-slate-900">

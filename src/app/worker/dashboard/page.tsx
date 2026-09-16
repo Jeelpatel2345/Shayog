@@ -49,18 +49,22 @@ export default function WorkerDashboard() {
   const [liveReviewCount, setLiveReviewCount] = useState<number>(14);
   const [newReviewReceived, setNewReviewReceived] = useState<any | null>(null);
 
-  // Lock Worker Role & Profile Hydration
-  // Lock Worker Role, Profile Hydration & Live 3-Second Cross-Device Polling
+  // STRICT INDIVIDUAL WORKER DASHBOARD LOCK:
+  // Individual workers can ONLY see the Individual Dashboard and cannot access the community dashboard!
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      // STRICT COMMUNITY ISOLATION:
-      // If worker provides service as community, they are locked to community dashboard
-      // and cannot see individual worker dashboard or private jobs!
-      if (localStorage.getItem('sahyog_worker_mode') === 'COMMUNITY') {
-        window.location.href = '/worker/community';
+      const role = localStorage.getItem('sahyog-role');
+      const mode = localStorage.getItem('sahyog_worker_mode');
+      if (role === 'CUSTOMER') {
+        window.location.replace('/customer/dashboard');
+        return;
+      }
+      if (mode === 'COMMUNITY') {
+        window.location.replace('/worker/community');
         return;
       }
 
+      localStorage.setItem('sahyog_worker_mode', 'INDIVIDUAL');
       localStorage.setItem('sahyog-role', 'WORKER');
       localStorage.setItem('sahyog-logged-in', 'true');
 
@@ -389,7 +393,7 @@ export default function WorkerDashboard() {
       localStorage.removeItem('sahyog-user-bookings');
       localStorage.removeItem('sahyog_squad_name');
       localStorage.removeItem('sahyog_society_name');
-      window.location.href = '/login';
+      window.location.href = '/login?role=worker';
     }
   };
 
@@ -522,22 +526,12 @@ export default function WorkerDashboard() {
             </div>
 
             <div className="mt-3.5 pt-3 border-t border-white/10 flex items-center justify-between">
-              <span className="text-[11px] text-teal-300 font-semibold flex items-center gap-1">
-                <Building2 className="w-3.5 h-3.5" /> 4+ Societies Active
+              <span className="text-[11px] text-teal-200 font-semibold flex items-center gap-1">
+                <ShieldCheck className="w-3.5 h-3.5 text-teal-300" /> Private Home Visits Verified
               </span>
-              <button
-                type="button"
-                onClick={() => {
-                  if (typeof window !== 'undefined') {
-                    localStorage.setItem('sahyog_worker_mode', 'COMMUNITY');
-                    window.location.href = '/worker/community';
-                  }
-                }}
-                className="px-3.5 py-1.5 bg-teal-500 hover:bg-teal-400 text-slate-950 font-black text-xs rounded-xl shadow transition flex items-center gap-1.5 cursor-pointer"
-              >
-                <span>Provide Community Service</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
+              <span className="text-[10px] font-black text-amber-300 bg-white/10 px-2.5 py-1 rounded-full uppercase">
+                1-on-1 Individual Mode
+              </span>
             </div>
           </div>
 

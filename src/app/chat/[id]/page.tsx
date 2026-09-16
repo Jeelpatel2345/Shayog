@@ -226,7 +226,8 @@ export default function ChatPage() {
               type="button"
               onClick={() => {
                 if (isWorkerMode) {
-                  router.push('/worker/dashboard');
+                  const isCommunity = typeof window !== 'undefined' && localStorage.getItem('sahyog_worker_mode') === 'COMMUNITY';
+                  router.push(isCommunity ? '/worker/community' : '/worker/dashboard');
                 } else {
                   router.push('/customer/dashboard');
                 }

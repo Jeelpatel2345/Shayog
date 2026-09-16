@@ -10,25 +10,33 @@ interface BottomNavProps {
 export default function BottomNav({ role = 'customer' }: BottomNavProps) {
   const pathname = usePathname();
 
-  // Auto-detect role from path or localStorage
+  // Auto-detect role and community mode from path or localStorage
   const isWorkerPath = pathname.startsWith('/worker');
+  const isCommunityWorker = 
+    pathname === '/worker/community' || 
+    (typeof window !== 'undefined' && localStorage.getItem('sahyog_worker_mode') === 'COMMUNITY');
+
   const effectiveRole = isWorkerPath 
-    ? 'worker' 
+    ? (isCommunityWorker ? 'community_worker' : 'worker') 
     : (typeof window !== 'undefined' && localStorage.getItem('sahyog-role') === 'WORKER') 
-      ? 'worker' 
+      ? (isCommunityWorker ? 'community_worker' : 'worker') 
       : role;
 
   const homeHref = effectiveRole === 'admin' 
     ? '/admin/overview' 
-    : effectiveRole === 'worker' 
-      ? '/worker/dashboard' 
-      : '/customer/dashboard';
+    : effectiveRole === 'community_worker'
+      ? '/worker/community'
+      : effectiveRole === 'worker' 
+        ? '/worker/dashboard' 
+        : '/customer/dashboard';
 
   const bookingsHref = effectiveRole === 'admin' 
     ? '/admin/bookings' 
-    : effectiveRole === 'worker'
-      ? '/worker/bookings'
-      : '/customer/bookings';
+    : effectiveRole === 'community_worker'
+      ? '/worker/community'
+      : effectiveRole === 'worker'
+        ? '/worker/bookings'
+        : '/customer/bookings';
 
   const chatHref = effectiveRole === 'worker' ? '/chat/1?role=worker' : '/chat/ai';
 

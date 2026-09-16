@@ -87,7 +87,8 @@ export default function NotificationsPage() {
   });
 
   const isWorker = typeof window !== 'undefined' && localStorage.getItem('sahyog-role') === 'WORKER';
-  const backHref = isWorker ? '/worker/dashboard' : '/customer/dashboard';
+  const isCommunity = typeof window !== 'undefined' && localStorage.getItem('sahyog_worker_mode') === 'COMMUNITY';
+  const backHref = isWorker ? (isCommunity ? '/worker/community' : '/worker/dashboard') : '/customer/dashboard';
 
   return (
     <div className="min-h-screen bg-slate-50 pb-28 text-slate-900">
