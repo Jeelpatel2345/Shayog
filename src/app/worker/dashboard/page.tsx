@@ -404,7 +404,7 @@ export default function WorkerDashboard() {
             <img 
               src="/logo.png" 
               alt="SahYog" 
-              className="w-9 h-9 rounded-full object-cover border border-teal-200 shadow-xs" 
+              className="w-9 h-9 object-contain drop-shadow-sm" 
             />
             <div>
               <div className="flex items-center gap-1.5">

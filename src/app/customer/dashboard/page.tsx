@@ -654,7 +654,7 @@ export default function CustomerDashboard() {
       <header className="hidden md:block bg-[#0f3854] border-b border-emerald-900/50 sticky top-0 z-30 shadow-md">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/logo.png" alt="SahYog" className="w-9 h-9 rounded-full object-cover shadow-md" />
+            <img src="/logo.png" alt="SahYog" className="w-10 h-10 object-contain drop-shadow-md" />
             <div>
               <span className="font-black text-lg tracking-tight text-white">SahYog</span>
               <span className="ml-2 text-[10px] font-bold bg-amber-400/20 text-amber-300 border border-amber-400/40 px-2 py-0.5 rounded">
@@ -716,7 +716,7 @@ export default function CustomerDashboard() {
           {/* Mobile top bar */}
           <div className="md:hidden flex items-center justify-between pb-3 border-b border-white/10">
             <div className="flex items-center gap-2">
-              <img src="/logo.png" alt="SahYog" className="w-8 h-8 rounded-full object-cover shadow-sm" />
+              <img src="/logo.png" alt="SahYog" className="w-9 h-9 object-contain drop-shadow-sm" />
               <div>
                 <h1 className="font-black text-base tracking-tight leading-none text-white">SahYog</h1>
                 <span className="text-[9px] text-emerald-200 font-medium tracking-wider uppercase">Community Hub</span>

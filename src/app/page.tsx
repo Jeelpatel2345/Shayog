@@ -64,7 +64,7 @@ export default function RootPage() {
             <img 
               src="/logo.png" 
               alt="SahYog" 
-              className="w-20 h-20 rounded-full object-cover shadow-inner" 
+              className="w-20 h-20 object-contain drop-shadow-md" 
             />
           </div>
           <span className="absolute bottom-0 right-0 w-6 h-6 bg-amber-400 text-emerald-950 rounded-full flex items-center justify-center font-black text-xs border-2 border-[#0f3854] shadow-md">

@@ -58,8 +58,8 @@ export default function DownloadAppPage() {
         </div>
 
         {/* App Icon */}
-        <div className="w-20 h-20 bg-gradient-to-br from-[#0f3854] via-[#0d9488] to-[#16a34a] rounded-3xl flex items-center justify-center text-amber-300 text-2xl font-black shadow-lg shadow-teal-900/20 mb-3 border-2 border-teal-400/30">
-          SY
+        <div className="w-20 h-20 mb-3 flex items-center justify-center drop-shadow-xl">
+          <img src="/logo.png" alt="SahYog App Icon" className="w-full h-full object-contain" />
         </div>
 
         <h1 className="text-2xl font-black text-slate-900 tracking-tight">SahYog App</h1>
