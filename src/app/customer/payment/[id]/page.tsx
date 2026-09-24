@@ -96,8 +96,8 @@ function PaymentContent({ params }: { params: { id: string } }) {
     let newBookingId = '1';
 
     try {
-      const custName = (typeof window !== 'undefined' && localStorage.getItem('sahyog-user-name')) || 'Jeel Patel';
-      const custPhone = (typeof window !== 'undefined' && localStorage.getItem('sahyog-user-phone')) || '+919876543210';
+      const custName = (typeof window !== 'undefined' && localStorage.getItem('sahyog-user-name')) || 'Customer';
+      const custPhone = (typeof window !== 'undefined' && localStorage.getItem('sahyog-user-phone')) || '';
 
       const res = await fetch('/api/bookings', {
         method: 'POST',

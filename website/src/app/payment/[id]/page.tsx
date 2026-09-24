@@ -53,6 +53,38 @@ export default function PaymentPage() {
     return `${String(mins).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   };
 
+  // Listen for real-time payment confirmation from Service Partner
+  useEffect(() => {
+    const handleSync = (data: any) => {
+      if (!data) return;
+      if (data.type === 'PAYMENT_RECEIVED') {
+        handleConfirmPayment();
+      }
+    };
+
+    let channel: BroadcastChannel | null = null;
+    try {
+      channel = new BroadcastChannel('sahyog-realtime-sync');
+      channel.onmessage = (e) => {
+        if (e.data) handleSync(e.data);
+      };
+    } catch {}
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'sahyog-realtime-event' && e.newValue) {
+        try {
+          handleSync(JSON.parse(e.newValue));
+        } catch {}
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      channel?.close();
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, [bookingId]);
+
   const handleCopyUpi = () => {
     navigator.clipboard.writeText(upiId);
     setCopiedUpi(true);
@@ -61,17 +93,6 @@ export default function PaymentPage() {
 
   const handleConfirmPayment = () => {
     setVerifying(true);
-    // API sync to update database payment status
-    fetch(`/api/bookings/${bookingId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        status: 'CONFIRMED',
-        paymentMethod: 'UPI',
-        paymentTiming: 'PRE_PAID'
-      })
-    }).catch(() => {});
-
     // Simulate webhook verification
     setTimeout(() => {
       setVerifying(false);
@@ -84,31 +105,10 @@ export default function PaymentPage() {
           if (raw) {
             const list = JSON.parse(raw);
             const updated = list.map((b: any) => 
-              b.id === bookingId ? { ...b, status: 'CONFIRMED', paymentStatus: 'PAID', paymentMethod: 'UPI' } : b
+              b.id === bookingId ? { ...b, status: 'CONFIRMED', paymentStatus: 'PAID' } : b
             );
             localStorage.setItem('sahyog-user-bookings', JSON.stringify(updated));
           }
-
-          // Broadcast payment confirmation to worker
-          try {
-            const channel = new BroadcastChannel('sahyog-realtime-sync');
-            channel.postMessage({
-              type: 'PAYMENT_RECEIVED',
-              bookingId,
-              amount: totalAmount,
-              method: 'UPI',
-              timestamp: Date.now()
-            });
-            channel.close();
-          } catch {}
-
-          localStorage.setItem('sahyog-realtime-event', JSON.stringify({
-            type: 'PAYMENT_RECEIVED',
-            bookingId,
-            amount: totalAmount,
-            method: 'UPI',
-            timestamp: Date.now()
-          }));
         } catch {}
       }
 
@@ -329,30 +329,27 @@ export default function PaymentPage() {
                     </div>
                   </div>
 
-                  {/* Payment Verification Button */}
+                  {/* Awaiting Service Partner Verification Status (Customer cannot self-confirm) */}
                   <div className="pt-4 border-t border-slate-100 space-y-3">
-                    <button
-                      onClick={handleConfirmPayment}
-                      disabled={verifying}
-                      className="w-full bg-teal-700 hover:bg-teal-800 text-white font-black py-4 rounded-2xl shadow-lg transition flex items-center justify-center gap-2 text-sm cursor-pointer disabled:opacity-60 hover:scale-[1.01]"
-                    >
-                      {verifying ? (
-                        <>
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                          <span>Verifying Payment with Bank...</span>
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle2 className="w-5 h-5" />
-                          <span>I Have Paid ₹{totalAmount}</span>
-                          <ArrowRight className="w-4 h-4 ml-1" />
-                        </>
-                      )}
-                    </button>
+                    <div className="bg-emerald-50 border border-emerald-200 text-emerald-950 rounded-2xl p-4 flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0 mt-0.5">
+                        <ShieldCheck className="w-5 h-5 text-emerald-700 animate-pulse" />
+                      </div>
+                      <div className="space-y-1 text-left">
+                        <div className="text-xs font-black text-emerald-900 flex items-center gap-2">
+                          <span>Awaiting Service Partner Confirmation</span>
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                        </div>
+                        <p className="text-[11px] text-emerald-800 leading-relaxed">
+                          Scan the QR code above with any UPI app to pay <b>₹{totalAmount}</b>. Payment is verified and confirmed on the service partner's console upon receipt.
+                        </p>
+                      </div>
+                    </div>
 
-                    <p className="text-[11px] text-slate-400">
-                      Instant verification: After completing UPI payment on your phone, click above to verify and launch live tracking.
-                    </p>
+                    <div className="flex items-center justify-center gap-2 text-[11px] text-slate-500 font-medium py-1">
+                      <span className="w-2 h-2 rounded-full bg-teal-500 animate-pulse" />
+                      <span>Live sync active • Tracking will open automatically upon partner confirmation</span>
+                    </div>
                   </div>
                 </>
               )}

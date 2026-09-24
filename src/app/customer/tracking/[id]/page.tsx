@@ -137,7 +137,7 @@ export default function JobTrackingPage({ params }: { params: { id: string } }) 
           <Bell className="w-5 h-5" />
         </Link>
         <Link href="/profile" className="w-8 h-8 bg-teal-100 rounded-full flex items-center justify-center text-teal-800 font-bold text-xs">
-          JP
+          <User className="w-4 h-4" />
         </Link>
       </div>
 
@@ -148,7 +148,7 @@ export default function JobTrackingPage({ params }: { params: { id: string } }) 
           </div>
           <h2 className="text-xl font-bold text-gray-900">Booking Cancelled</h2>
           <p className="text-sm text-gray-500 mt-1 max-w-xs mx-auto">
-            Your booking #SY-9842 has been cancelled. A 100% full refund of ₹450.00 has been initiated to your UPI account.
+            Your booking #{currentBookingCode} has been cancelled. A 100% full refund of ₹{currentTotalAmount}.00 has been initiated to your UPI account.
           </p>
           <div className="mt-6 space-y-2">
             <Link
@@ -169,8 +169,8 @@ export default function JobTrackingPage({ params }: { params: { id: string } }) 
         <>
           {/* Real Interactive OpenStreetMap */}
           <RealTrackingMap 
-            workerName="Rajesh Kumar (Master Plumber)" 
-            customerAddress="B/402, Shanti Heights, Navrangpura, Ahmedabad"
+            workerName={currentWorkerName} 
+            customerAddress={currentServiceLocation}
             initialDistanceKm={2.4}
           />
 

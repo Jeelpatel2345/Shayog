@@ -5,9 +5,10 @@ import Link from 'next/link';
 import { 
   Search, MapPin, Sparkles, ShieldCheck, Star, Clock, 
   ArrowRight, CheckCircle2, ChevronRight, Users, Award, 
-  Smartphone, Wrench, Zap, Cpu, Hammer, Paintbrush, Shield 
+  Smartphone, Wrench, Zap, Cpu, Hammer, Paintbrush, Shield, Building2 
 } from 'lucide-react';
 import { serviceCategories, allWorkers } from '@/data/workersData';
+import { communityPackages } from '@/data/communityData';
 
 const iconMap: Record<string, any> = {
   Sparkles,
@@ -238,65 +239,148 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Service Categories Section */}
+      {/* Service Categories / Community Packages Section */}
       <section className="py-20 bg-slate-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
               <span className="text-xs uppercase tracking-wider font-bold text-teal-700 bg-teal-50 border border-teal-200 px-3 py-1 rounded-full">
-                All 6 Core Categories
+                {scope === 'COMMUNITY' ? '🏢 Society & Community Contracts' : '👤 All 6 Core Home Categories'}
               </span>
               <h2 className="text-3xl sm:text-4xl font-black text-slate-900 mt-3 tracking-tight">
-                Professional Services You Can Trust
+                {scope === 'COMMUNITY' 
+                  ? 'Official Community & Society Service Packages' 
+                  : 'Professional Services You Can Trust'}
               </h2>
               <p className="text-sm text-slate-600 mt-1 max-w-xl">
-                Choose a category to browse all 100+ active background-checked professionals in Gujarat.
+                {scope === 'COMMUNITY'
+                  ? 'Industrial-grade multi-worker crew packages tailored for residential societies, commercial complexes & apartments with pooled savings.'
+                  : 'Choose a category to browse all 100+ active background-checked professionals in Gujarat.'}
               </p>
             </div>
             <Link
-              href="/services"
+              href={scope === 'COMMUNITY' ? '/services?scope=community' : '/services'}
               className="inline-flex items-center gap-2 text-sm font-bold text-teal-700 hover:text-teal-800 transition"
             >
-              <span>View all 100 workers</span>
+              <span>{scope === 'COMMUNITY' ? 'View all society packages' : 'View all 100 workers'}</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {serviceCategories.map((cat) => {
-              const IconComp = iconMap[cat.icon] || Wrench;
-              return (
-                <Link
-                  key={cat.id}
-                  href={'/services?category=' + encodeURIComponent(cat.name)}
-                  className="group bg-white rounded-3xl p-7 border border-slate-200/80 shadow-xs hover:shadow-xl hover:border-teal-400 transition-all duration-300 flex flex-col justify-between"
+          {scope === 'COMMUNITY' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-7">
+              {communityPackages.map((pkg) => (
+                <div
+                  key={pkg.id}
+                  className="bg-white rounded-3xl p-7 border border-slate-200 shadow-sm hover:shadow-xl hover:border-amber-400 transition-all duration-300 flex flex-col justify-between relative overflow-hidden"
                 >
-                  <div>
-                    <div className="flex items-center justify-between mb-5">
-                      <div className="w-14 h-14 rounded-2xl bg-teal-50 group-hover:bg-teal-600 text-teal-700 group-hover:text-white flex items-center justify-center transition shadow-xs">
-                        <IconComp className="w-7 h-7" />
-                      </div>
-                      <span className="text-xs font-black bg-slate-100 group-hover:bg-amber-400 group-hover:text-emerald-950 text-slate-600 px-3 py-1 rounded-full transition">
-                        {cat.count}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <span className="text-xs font-black bg-teal-50 text-teal-800 border border-teal-200 px-3 py-1 rounded-full flex items-center gap-1.5">
+                        <Building2 className="w-3.5 h-3.5 text-teal-600" />
+                        <span>{pkg.tradeCategory} Squad</span>
+                      </span>
+                      <span className="text-xs font-black bg-amber-400 text-teal-950 px-3 py-1 rounded-full shadow-xs">
+                        👥 {pkg.crewSize} Workers Crew
                       </span>
                     </div>
 
-                    <h3 className="text-xl font-black text-slate-900 group-hover:text-teal-700 transition">
-                      {cat.name}
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-2 leading-relaxed">
-                      {cat.description}
-                    </p>
+                    <div>
+                      <h3 className="text-xl font-black text-slate-900 leading-snug">
+                        {pkg.title}
+                      </h3>
+                      <div className="flex items-baseline gap-2 mt-2">
+                        <span className="text-2xl font-black text-teal-800">₹{pkg.discountedRateINR}</span>
+                        <span className="text-xs text-slate-400 line-through font-semibold">₹{pkg.baseRateINR}</span>
+                        <span className="text-xs font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                          {pkg.residentSavingsPercent}% Society Discount
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                        Included Industrial Equipment:
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {pkg.includedEquipment.map((eq, i) => (
+                          <span
+                            key={i}
+                            className="text-[11px] font-semibold bg-slate-100 text-slate-700 px-2.5 py-1 rounded-lg border border-slate-200"
+                          >
+                            ✓ {eq}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5 pt-2 border-t border-slate-100">
+                      <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                        Scope of Work:
+                      </p>
+                      <ul className="space-y-1 text-xs text-slate-600">
+                        {pkg.scopePoints.map((pt, i) => (
+                          <li key={i} className="flex items-start gap-2">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-teal-600 flex-shrink-0 mt-0.5" />
+                            <span>{pt}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   </div>
 
-                  <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-teal-700 group-hover:translate-x-1 transition">
-                    <span>Browse {cat.name}</span>
-                    <ChevronRight className="w-4 h-4" />
+                  <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-xs text-slate-500 font-semibold">
+                      Estimated Duration: <b>{pkg.durationHours} Hours</b>
+                    </span>
+                    <Link
+                      href={'/services?search=' + encodeURIComponent(pkg.tradeCategory)}
+                      className="inline-flex items-center gap-2 text-xs font-black bg-teal-700 hover:bg-teal-800 text-white px-4 py-2.5 rounded-xl shadow-xs transition"
+                    >
+                      <span>Book Squad Service</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
                   </div>
-                </Link>
-              );
-            })}
-          </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {serviceCategories.map((cat) => {
+                const IconComp = iconMap[cat.icon] || Wrench;
+                return (
+                  <Link
+                    key={cat.id}
+                    href={'/services?category=' + encodeURIComponent(cat.name)}
+                    className="group bg-white rounded-3xl p-7 border border-slate-200/80 shadow-xs hover:shadow-xl hover:border-teal-400 transition-all duration-300 flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-5">
+                        <div className="w-14 h-14 rounded-2xl bg-teal-50 group-hover:bg-teal-600 text-teal-700 group-hover:text-white flex items-center justify-center transition shadow-xs">
+                          <IconComp className="w-7 h-7" />
+                        </div>
+                        <span className="text-xs font-black bg-slate-100 group-hover:bg-amber-400 group-hover:text-emerald-950 text-slate-600 px-3 py-1 rounded-full transition">
+                          {cat.count}
+                        </span>
+                      </div>
+
+                      <h3 className="text-xl font-black text-slate-900 group-hover:text-teal-700 transition">
+                        {cat.name}
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+                        {cat.description}
+                      </p>
+                    </div>
+
+                    <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs font-bold text-teal-700 group-hover:translate-x-1 transition">
+                      <span>Browse {cat.name}</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </div>
       </section>
 
@@ -454,15 +538,13 @@ export default function HomePage() {
                 and live worker GPS map tracking on every service booking.
               </p>
               <div className="flex flex-wrap items-center gap-4 pt-2">
-                <a
-                  href="https://shayog-rb55.vercel.app/download"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <Link
+                  href="/download"
                   className="inline-flex items-center gap-2.5 bg-amber-400 hover:bg-amber-300 text-emerald-950 font-black text-xs sm:text-sm px-6 py-3.5 rounded-xl shadow-lg transition"
                 >
                   <Smartphone className="w-5 h-5" />
                   <span>Download Android App (.APK)</span>
-                </a>
+                </Link>
                 <span className="text-xs text-emerald-200 font-semibold">
                   Version 2.4.0 • 5.4 MB • Android 8.0+
                 </span>

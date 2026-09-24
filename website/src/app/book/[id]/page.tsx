@@ -59,11 +59,8 @@ export default function BookWorkerPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: tempId,
-          bookingCode: finalBookingCode,
           workerProfileId: worker.id,
           workerName: worker.name,
-          workerPhone: worker.phone,
           serviceTitle: worker.title,
           serviceName: worker.title,
           category: worker.category,
@@ -71,7 +68,7 @@ export default function BookWorkerPage() {
           scheduledTime: selectedTime,
           serviceLocation: serviceAddress,
           customerPhone: customerPhone,
-          customerName: fullName || 'Jeel Patel',
+          customerName: fullName || (typeof window !== 'undefined' ? localStorage.getItem('sahyog-user-name') : '') || 'Customer',
           totalAmount: calculation.total,
           serviceFee: calculation.serviceFee,
           platformFee: calculation.platformFee,
@@ -101,7 +98,6 @@ export default function BookWorkerPage() {
           bookingCode: finalBookingCode,
           workerId: worker.id,
           workerName: worker.name,
-          workerPhone: worker.phone,
           serviceTitle: worker.title,
           serviceName: worker.title,
           scheduledDate: selectedDate,
@@ -122,25 +118,6 @@ export default function BookWorkerPage() {
         const list = raw ? JSON.parse(raw) : [];
         list.unshift(newBooking);
         localStorage.setItem('sahyog-user-bookings', JSON.stringify(list));
-
-        // Real-time cross-tab / cross-device broadcast
-        try {
-          const channel = new BroadcastChannel('sahyog-realtime-sync');
-          channel.postMessage({
-            type: 'NEW_BOOKING',
-            booking: newBooking,
-            workerName: worker.name,
-            timestamp: Date.now()
-          });
-          channel.close();
-        } catch {}
-
-        localStorage.setItem('sahyog-realtime-event', JSON.stringify({
-          type: 'NEW_BOOKING',
-          booking: newBooking,
-          workerName: worker.name,
-          timestamp: Date.now()
-        }));
       } catch {}
     }
 

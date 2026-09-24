@@ -116,9 +116,15 @@ function WorkerCommunityDashboardContent() {
 
   const [workerName, setWorkerName] = useState<string>(() => {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('sahyog-user-name') || 'Jeel';
+      return localStorage.getItem('sahyog-user-name') || 'Squad Leader';
     }
-    return 'Jeel';
+    return 'Squad Leader';
+  });
+  const [isDocVerified, setIsDocVerified] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('sahyog_worker_verified') === 'true';
+    }
+    return false;
   });
   const [workerRoleInSquad, setWorkerRoleInSquad] = useState<'LEAD' | 'SPECIALIST'>('LEAD');
   const [activeBooking, setActiveBooking] = useState<CommunityBooking>(defaultActiveCommunityBooking);
@@ -628,7 +634,31 @@ function WorkerCommunityDashboardContent() {
 
               {/* Action Button: Verify Gate OTP or Complete Job */}
               <div className="pt-2">
-                {jobStatus === 'CREW_EN_ROUTE' && (
+                {!isDocVerified ? (
+                  <div className="space-y-2.5">
+                    <div className="p-3.5 bg-rose-500/20 border border-rose-400/40 rounded-2xl text-xs text-rose-200 space-y-1">
+                      <p className="font-black text-rose-100 flex items-center gap-1.5">
+                        <AlertCircle className="w-4 h-4 text-rose-300" />
+                        <span>Squad Documents Verification Required</span>
+                      </p>
+                      <p className="leading-relaxed">
+                        Society campus entry rules mandate that all squad personnel must have approved KYC documents. Unverified squads cannot start campus assignments.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsDocVerified(true);
+                        if (typeof window !== 'undefined') localStorage.setItem('sahyog_worker_verified', 'true');
+                        setToastNotice('✅ Community Squad KYC Verified! Campus entry authorized.');
+                      }}
+                      className="w-full bg-rose-500 hover:bg-rose-600 text-white font-black py-3 rounded-2xl shadow-lg transition flex items-center justify-center gap-2 text-xs cursor-pointer"
+                    >
+                      <ShieldCheck className="w-4 h-4" />
+                      <span>Verify & Authorize Squad KYC (Instant Approval)</span>
+                    </button>
+                  </div>
+                ) : jobStatus === 'CREW_EN_ROUTE' ? (
                   <button
                     type="button"
                     onClick={() => {
@@ -641,9 +671,7 @@ function WorkerCommunityDashboardContent() {
                     <KeyRound className="w-5 h-5" />
                     <span>Verify Society Gate OTP & Start Squad Work</span>
                   </button>
-                )}
-
-                {jobStatus === 'IN_PROGRESS' && (
+                ) : jobStatus === 'IN_PROGRESS' ? (
                   <button
                     type="button"
                     onClick={handleCompleteSocietyJob}
@@ -652,9 +680,7 @@ function WorkerCommunityDashboardContent() {
                     <CheckCircle2 className="w-5 h-5" />
                     <span>Mark Society Squad Job COMPLETED (Finish)</span>
                   </button>
-                )}
-
-                {jobStatus === 'COMPLETED' && (
+                ) : (
                   <div className="p-3 bg-emerald-500/20 border border-emerald-400/40 rounded-2xl text-center text-xs font-bold text-emerald-200">
                     🎉 Job Completed! All squad tasks verified and signed off by Society Secretary.
                   </div>

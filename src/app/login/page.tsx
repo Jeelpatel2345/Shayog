@@ -21,21 +21,27 @@ export default function LoginPage() {
   // Community Squad Options & Official Registration Form
   const [workerType, setWorkerType] = useState<'INDIVIDUAL' | 'COMMUNITY'>('INDIVIDUAL');
   
+  // INDIVIDUAL WORKER PREFERRED WORK
+  const [preferredIndividualWork, setPreferredIndividualWork] = useState<string[]>([
+    'Electrical & Wiring (बिजली काम)',
+    'Plumbing & Pipe Fitting (नल और पाइप)'
+  ]);
+
   // COMMUNITY DETAILS
   const [communityName, setCommunityName] = useState('Shanti Heights Resident Society');
   const [customCommunityName, setCustomCommunityName] = useState('');
   const [communityType, setCommunityType] = useState('Cooperative Housing Society');
-  const [fullAddress, setFullAddress] = useState('Plot 42, Sector 12, Near Commerce Six Roads, Navrangpura');
+  const [fullAddress, setFullAddress] = useState('Plot 42, Sector 12, Navrangpura');
   const [city, setCity] = useState('Ahmedabad');
   const [district, setDistrict] = useState('Ahmedabad Urban');
   const [stateName, setStateName] = useState('Gujarat');
   const [pincode, setPincode] = useState('380009');
 
   // AUTHORIZED REPRESENTATIVE
-  const [repName, setRepName] = useState('Kiritbhai Shah');
-  const [repDesignation, setRepDesignation] = useState('Chairman');
-  const [repMobile, setRepMobile] = useState('+91 98250 11223');
-  const [repEmail, setRepEmail] = useState('chairman@shantiheights.org');
+  const [repName, setRepName] = useState('');
+  const [repDesignation, setRepDesignation] = useState('Chairman / Secretary');
+  const [repMobile, setRepMobile] = useState('');
+  const [repEmail, setRepEmail] = useState('');
 
   // WORKER TYPES IN COMMUNITY
   const [selectedWorkerTypes, setSelectedWorkerTypes] = useState<string[]>([
@@ -46,8 +52,8 @@ export default function LoginPage() {
   ]);
 
   // SUPPORTING INFORMATION
-  const [registrationNumber, setRegistrationNumber] = useState('GUJ/AHM/2018/4891');
-  const [registrationAuthority, setRegistrationAuthority] = useState('District Registrar of Co-operative Societies, Ahmedabad');
+  const [registrationNumber, setRegistrationNumber] = useState('');
+  const [registrationAuthority, setRegistrationAuthority] = useState('');
   const [attachedProofs, setAttachedProofs] = useState<string[]>([
     'Registration Certificate',
     'Society/Association Document',
@@ -56,12 +62,12 @@ export default function LoginPage() {
   const [hasCommunitySeal, setHasCommunitySeal] = useState(true);
 
   // COMMUNITY DECLARATION
-  const [repSignature, setRepSignature] = useState('Kiritbhai R. Shah');
+  const [repSignature, setRepSignature] = useState('');
   const [declarationDate, setDeclarationDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [declarationAccepted, setDeclarationAccepted] = useState(true);
 
   // Squad specifics
-  const [squadName, setSquadName] = useState('Shanti Heights Community Squad');
+  const [squadName, setSquadName] = useState('Community Service Squad');
   const [crewSize, setCrewSize] = useState('4 Workers Squad');
 
   const [otpSent, setOtpSent] = useState(false);
@@ -246,7 +252,7 @@ export default function LoginPage() {
 
       // Ensure if user selected WORKER tab, role is strictly WORKER
       const assignedRole = selectedRole === 'WORKER' ? 'WORKER' : (data.user.role || roleToSubmit);
-      const userFullName = fullName.trim() || data.user.fullName || (assignedRole === 'WORKER' ? 'Jaymeen Patel' : `User ${phone.slice(-4)}`);
+      const userFullName = fullName.trim() || data.user.fullName || (assignedRole === 'WORKER' ? `Partner ${cleanPhone.slice(-4)}` : `User ${cleanPhone.slice(-4)}`);
       
       setAuth({
         userId: data.user.id,
@@ -261,9 +267,14 @@ export default function LoginPage() {
       localStorage.setItem('sahyog-role', assignedRole);
       localStorage.setItem('sahyog-logged-in', 'true');
 
+      if (assignedRole === 'WORKER') {
+        const chosenWork = workerType === 'COMMUNITY' ? selectedWorkerTypes : preferredIndividualWork;
+        localStorage.setItem('sahyog_preferred_work', JSON.stringify(chosenWork));
+      }
+
       // Auto-register worker in DB & local store so search finds them immediately!
       if (assignedRole === 'WORKER') {
-        const finalCommunity = (communityName === 'CUSTOM' ? customCommunityName : communityName) || 'Shanti Heights Resident Society';
+        const finalCommunity = (communityName === 'CUSTOM' ? customCommunityName : communityName) || 'Resident Welfare Society';
         const finalSquad = squadName.trim() || `${finalCommunity} Squad`;
 
         try {
@@ -559,7 +570,7 @@ export default function LoginPage() {
                       type="text"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
-                      placeholder={selectedRole === 'WORKER' && workerType === 'COMMUNITY' ? 'e.g. Jaymeen Patel' : 'e.g. Jeel Patel'}
+                      placeholder={selectedRole === 'WORKER' && workerType === 'COMMUNITY' ? 'e.g. Supervisor / Team Lead' : 'e.g. Rahul Sharma'}
                       className="w-full bg-transparent outline-none text-sm font-semibold text-slate-900 placeholder-slate-400"
                     />
                   </div>
@@ -585,6 +596,57 @@ export default function LoginPage() {
                   </div>
                   <p className="text-[11px] text-slate-400 mt-1">Example: 9876543210</p>
                 </div>
+
+                {/* Individual Worker Preferred Work Types Selection */}
+                {selectedRole === 'WORKER' && workerType === 'INDIVIDUAL' && (
+                  <div className="p-3.5 bg-slate-50 rounded-2xl border-2 border-teal-200/80 space-y-2.5 animate-in fade-in">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-slate-800 block">
+                        What type of work do you prefer to do? (पसंदीदा कार्य)
+                      </label>
+                      <span className="text-[10px] bg-teal-100 text-teal-800 font-bold px-2 py-0.5 rounded-full">
+                        Skill Trades
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500">
+                      Select trades you want to receive booking orders for:
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        'Electrical & Wiring (बिजली काम)',
+                        'Plumbing & Pipe Fitting (नल और पाइप)',
+                        'Home & Deep Cleaning (सफाई सेवा)',
+                        'AC & Appliance Repair (एसी व उपकरण)',
+                        'Carpentry & Woodwork (बढ़ई काम)',
+                        'Painting & Wall Finishing (पुताई और रंग)'
+                      ].map((trade) => {
+                        const isSelected = preferredIndividualWork.includes(trade);
+                        return (
+                          <button
+                            key={trade}
+                            type="button"
+                            onClick={() => {
+                              if (isSelected) {
+                                if (preferredIndividualWork.length > 1) {
+                                  setPreferredIndividualWork(preferredIndividualWork.filter((t) => t !== trade));
+                                }
+                              } else {
+                                setPreferredIndividualWork([...preferredIndividualWork, trade]);
+                              }
+                            }}
+                            className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold transition border ${
+                              isSelected
+                                ? 'bg-teal-700 text-white border-teal-700 shadow-xs'
+                                : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
+                            }`}
+                          >
+                            {isSelected ? '✓ ' : '+ '}{trade}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 {/* Community Specific Details */}
                 {selectedRole === 'WORKER' && workerType === 'COMMUNITY' && (

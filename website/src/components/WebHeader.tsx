@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { 
   ShieldCheck, User, Menu, X, ArrowRight, LogOut, 
-  Calendar, MapPin, Phone, Sparkles 
+  Calendar, MapPin, Phone, Sparkles, Smartphone 
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 
@@ -119,6 +119,13 @@ export default function WebHeader() {
             >
               My Bookings
             </Link>
+            <Link 
+              href="/download" 
+              className={'hover:text-amber-300 transition flex items-center gap-1 ' + (pathname === '/download' ? 'text-amber-300 font-bold' : '')}
+            >
+              <Smartphone className="w-4 h-4 text-amber-300" />
+              <span>Get App</span>
+            </Link>
           </nav>
 
           {/* Right Action Buttons */}
@@ -214,6 +221,14 @@ export default function WebHeader() {
             className="block px-3 py-2 rounded-lg text-sm font-semibold text-emerald-100 hover:bg-emerald-800/50"
           >
             My Bookings
+          </Link>
+          <Link
+            href="/download"
+            onClick={() => setMobileMenuOpen(false)}
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-amber-300 hover:bg-emerald-800/50"
+          >
+            <Smartphone className="w-4 h-4" />
+            <span>Download Android App (.APK)</span>
           </Link>
           <Link
             href="/profile"

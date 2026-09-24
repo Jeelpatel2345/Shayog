@@ -22,6 +22,7 @@ export default function LoginPage() {
   const [errorMsg, setErrorMsg] = useState('');
   const [receivedOtp, setReceivedOtp] = useState('');
   const [showTwilioNotification, setShowTwilioNotification] = useState(false);
+  const [preferredWork, setPreferredWork] = useState<string[]>(['Electrician & Power']);
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,6 +89,11 @@ export default function LoginPage() {
       if (typeof window !== 'undefined') {
         localStorage.setItem('sahyog-user-name', userFullName);
         localStorage.setItem('sahyog-user-phone', data.user.phone);
+        localStorage.setItem('sahyog-role', data.user.role || role);
+        localStorage.setItem('sahyog-logged-in', 'true');
+        if ((data.user.role || role) === 'WORKER') {
+          localStorage.setItem('sahyog_preferred_work', JSON.stringify(preferredWork));
+        }
       }
 
       router.push('/dashboard');
@@ -249,7 +255,7 @@ export default function LoginPage() {
                     type="text"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    placeholder="e.g. Jeel Patel"
+                    placeholder="e.g. Rahul Sharma"
                     className="w-full px-4 py-3 text-xs sm:text-sm font-medium border border-slate-200 rounded-xl outline-none focus:border-teal-600 transition text-slate-900"
                   />
                 </div>
@@ -273,6 +279,53 @@ export default function LoginPage() {
                     />
                   </div>
                 </div>
+
+                {role === 'WORKER' && (
+                  <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2.5">
+                    <label className="text-xs font-bold text-slate-800 block">
+                      What type of work do you prefer to do? (पसंदीदा कार्य चुनें)
+                    </label>
+                    <p className="text-[11px] text-slate-500">
+                      Select one or more trades you are skilled at:
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        'Electrician & Power',
+                        'Plumbing & Pipe Fitting',
+                        'Home & Deep Cleaning',
+                        'AC & Appliance Repair',
+                        'Carpenter & Woodwork',
+                        'Painting & Waterproofing',
+                        'Water Tank Disinfection',
+                        'Society Substation AMC'
+                      ].map((trade) => {
+                        const isSelected = preferredWork.includes(trade);
+                        return (
+                          <button
+                            key={trade}
+                            type="button"
+                            onClick={() => {
+                              if (isSelected) {
+                                if (preferredWork.length > 1) {
+                                  setPreferredWork(preferredWork.filter((t) => t !== trade));
+                                }
+                              } else {
+                                setPreferredWork([...preferredWork, trade]);
+                              }
+                            }}
+                            className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold transition border ${
+                              isSelected
+                                ? 'bg-teal-700 text-white border-teal-700 shadow-xs'
+                                : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
+                            }`}
+                          >
+                            {isSelected ? '✓ ' : '+ '}{trade}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
                 <button
                   type="submit"

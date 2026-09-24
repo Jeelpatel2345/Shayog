@@ -7,7 +7,7 @@ import {
   CreditCard, Globe, ChevronRight, LogOut, Heart, FileText, 
   HelpCircle, Settings, Camera, CheckCircle2, AlertCircle, 
   Sparkles, Wrench, Clock, Star, Edit3, Plus, SwitchCamera, Smartphone, Save, Loader2, Database,
-  Users, ArrowRight
+  Users, ArrowRight, Briefcase, Check
 } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
 import { useAuthStore } from '@/store/authStore';
@@ -21,6 +21,14 @@ export default function ProfilePage() {
   const [userEmail, setUserEmail] = useState('');
   const [userCity, setUserCity] = useState('');
   const [userAddress, setUserAddress] = useState('');
+  const [userRole, setUserRole] = useState<'CUSTOMER' | 'WORKER'>('CUSTOMER');
+  const [preferredTrades, setPreferredTrades] = useState<string[]>([
+    'Electrical & Wiring (बिजली काम)',
+    'Plumbing & Pipe Fitting (नल और पाइप)'
+  ]);
+  const [isDocVerified, setIsDocVerified] = useState<boolean>(false);
+  const [workerUpi, setWorkerUpi] = useState('sahyog.partner@okhdfcbank');
+  const [workerBank, setWorkerBank] = useState('HDFC Bank •••• 8812');
 
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -39,11 +47,11 @@ export default function ProfilePage() {
         window.matchMedia('(display-mode: standalone)').matches;
       if (!isInsideApp) setShowDownloadApk(true);
     }
-    const savedName = fullName || (typeof window !== 'undefined' ? localStorage.getItem('sahyog-user-name') : '') || 'Jeel Patel';
-    const savedPhone = phone || (typeof window !== 'undefined' ? localStorage.getItem('sahyog-user-phone') : '') || '+91 98765 43210';
-    const savedEmail = (typeof window !== 'undefined' ? localStorage.getItem('sahyog-user-email') : '') || 'jeel.patel@sahyog.in';
-    const savedCity = (typeof window !== 'undefined' ? localStorage.getItem('sahyog-user-city') : '') || 'Ahmedabad, Gujarat';
-    const savedAddress = (typeof window !== 'undefined' ? localStorage.getItem('sahyog-user-address') : '') || 'B/402, Shanti Heights, Sector 12, Navrangpura';
+    const savedName = fullName || (typeof window !== 'undefined' ? localStorage.getItem('sahyog-user-name') : '') || (phone ? `User ${phone.slice(-4)}` : '');
+    const savedPhone = phone || (typeof window !== 'undefined' ? localStorage.getItem('sahyog-user-phone') : '') || '';
+    const savedEmail = (typeof window !== 'undefined' ? localStorage.getItem('sahyog-user-email') : '') || '';
+    const savedCity = (typeof window !== 'undefined' ? localStorage.getItem('sahyog-user-city') : '') || '';
+    const savedAddress = (typeof window !== 'undefined' ? localStorage.getItem('sahyog-user-address') : '') || '';
 
     setUserName(savedName);
     setUserPhone(savedPhone);
@@ -76,10 +84,57 @@ export default function ProfilePage() {
             setUserAddress(data.user.customerProfile.address);
             localStorage.setItem('sahyog-user-address', data.user.customerProfile.address);
           }
+          if (data.user.role === 'WORKER') {
+            setUserRole('WORKER');
+          }
         }
       })
       .catch(() => {});
-  }, [fullName, phone]);
+
+    const storedRole = (typeof window !== 'undefined' ? localStorage.getItem('sahyog-role') : '') || role;
+    if (storedRole === 'WORKER') {
+      setUserRole('WORKER');
+    }
+    const storedTrades = typeof window !== 'undefined' ? localStorage.getItem('sahyog_preferred_work') : null;
+    if (storedTrades) {
+      try {
+        const parsed = JSON.parse(storedTrades);
+        if (Array.isArray(parsed) && parsed.length > 0) setPreferredTrades(parsed);
+      } catch {}
+    }
+    const verifiedStored = typeof window !== 'undefined' && localStorage.getItem('sahyog_worker_verified') === 'true';
+    setIsDocVerified(verifiedStored);
+  }, [fullName, phone, role]);
+
+  const handleRoleToggle = (newRole: 'CUSTOMER' | 'WORKER') => {
+    setUserRole(newRole);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sahyog-role', newRole);
+    }
+    setAuth({
+      userId: 'current-user',
+      role: newRole,
+      phone: userPhone,
+      fullName: userName,
+    });
+  };
+
+  const handleTradeToggle = (trade: string) => {
+    let updated: string[];
+    if (preferredTrades.includes(trade)) {
+      if (preferredTrades.length > 1) {
+        updated = preferredTrades.filter((t) => t !== trade);
+      } else {
+        return;
+      }
+    } else {
+      updated = [...preferredTrades, trade];
+    }
+    setPreferredTrades(updated);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sahyog_preferred_work', JSON.stringify(updated));
+    }
+  };
 
   const handleSaveProfile = async () => {
     setSaving(true);
@@ -152,7 +207,7 @@ export default function ProfilePage() {
   };
   const initials = getInitials(userName);
 
-  const isWorker = role === 'WORKER' || (typeof window !== 'undefined' && localStorage.getItem('sahyog-role') === 'WORKER');
+  const isWorker = userRole === 'WORKER' || role === 'WORKER' || (typeof window !== 'undefined' && localStorage.getItem('sahyog-role') === 'WORKER');
   const isCommunity = typeof window !== 'undefined' && localStorage.getItem('sahyog_worker_mode') === 'COMMUNITY';
   const backHref = isWorker ? (isCommunity ? '/worker/community' : '/worker/dashboard') : '/customer/dashboard';
 
@@ -168,7 +223,9 @@ export default function ProfilePage() {
             >
               <ArrowLeft className="w-5 h-5" />
             </Link>
-            <h1 className="font-bold text-base sm:text-lg text-white">My Account Profile</h1>
+            <h1 className="font-bold text-base sm:text-lg text-white">
+              {isWorker ? 'Partner Account Profile' : 'My Account Profile'}
+            </h1>
           </div>
 
           <div className="flex items-center gap-2">
@@ -213,11 +270,11 @@ export default function ProfilePage() {
 
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-xl sm:text-2xl font-black text-slate-900">{userName}</h2>
+                  <h2 className="text-xl sm:text-2xl font-black text-slate-900">{userName || 'Member'}</h2>
                   <ShieldCheck className="w-5 h-5 text-teal-600" />
                 </div>
                 <p className="text-xs text-slate-500 font-medium mt-0.5">
-                  SahYog Verified Member • {userCity}
+                  {isWorker ? 'SahYog Verified Service Partner' : 'SahYog Verified Member'} • {userCity || 'Gujarat'}
                 </p>
 
                 <div className="flex items-center gap-2 mt-2">
@@ -240,20 +297,69 @@ export default function ProfilePage() {
             </button>
           </div>
 
+          {/* Dual Role Switcher */}
+          <div className="mt-4 p-1 bg-slate-100 rounded-2xl flex border border-slate-200">
+            <button
+              type="button"
+              onClick={() => handleRoleToggle('CUSTOMER')}
+              className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                !isWorker
+                  ? 'bg-white text-teal-900 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <User className="w-3.5 h-3.5 text-teal-600" />
+              <span>Customer View (ग्राहक)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleRoleToggle('WORKER')}
+              className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                isWorker
+                  ? 'bg-teal-700 text-white shadow-sm'
+                  : 'text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <Briefcase className="w-3.5 h-3.5 text-amber-300" />
+              <span>Partner View (कामगार)</span>
+            </button>
+          </div>
+
           {/* Quick Metrics */}
-          <div className="grid grid-cols-3 gap-2 mt-6 pt-5 border-t border-slate-100 text-center">
-            <div className="bg-slate-50 rounded-2xl p-3 border border-slate-100">
-              <p className="text-[11px] text-slate-400 font-semibold">Bookings</p>
-              <p className="text-base font-black text-slate-900 mt-0.5">14 Done</p>
-            </div>
-            <div className="bg-slate-50 rounded-2xl p-3 border border-slate-100">
-              <p className="text-[11px] text-slate-400 font-semibold">Total Savings</p>
-              <p className="text-base font-black text-teal-700 mt-0.5">₹1,450</p>
-            </div>
-            <div className="bg-slate-50 rounded-2xl p-3 border border-slate-100">
-              <p className="text-[11px] text-slate-400 font-semibold">Trust Score</p>
-              <p className="text-base font-black text-slate-900 mt-0.5">100%</p>
-            </div>
+          <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-slate-100 text-center">
+            {isWorker ? (
+              <>
+                <div className="bg-slate-50 rounded-2xl p-2.5 border border-slate-100">
+                  <p className="text-[10px] text-slate-400 font-bold uppercase">Jobs Done</p>
+                  <p className="text-base font-black text-slate-900 mt-0.5">48 Done</p>
+                </div>
+                <div className="bg-slate-50 rounded-2xl p-2.5 border border-slate-100">
+                  <p className="text-[10px] text-slate-400 font-bold uppercase">Rating</p>
+                  <p className="text-base font-black text-amber-500 mt-0.5 flex items-center justify-center gap-0.5">
+                    4.9 <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                  </p>
+                </div>
+                <div className="bg-slate-50 rounded-2xl p-2.5 border border-slate-100">
+                  <p className="text-[10px] text-slate-400 font-bold uppercase">Total Payout</p>
+                  <p className="text-base font-black text-teal-700 mt-0.5">₹38,500</p>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="bg-slate-50 rounded-2xl p-2.5 border border-slate-100">
+                  <p className="text-[10px] text-slate-400 font-bold uppercase">Bookings</p>
+                  <p className="text-base font-black text-slate-900 mt-0.5">14 Done</p>
+                </div>
+                <div className="bg-slate-50 rounded-2xl p-2.5 border border-slate-100">
+                  <p className="text-[10px] text-slate-400 font-bold uppercase">Total Savings</p>
+                  <p className="text-base font-black text-teal-700 mt-0.5">₹1,450</p>
+                </div>
+                <div className="bg-slate-50 rounded-2xl p-2.5 border border-slate-100">
+                  <p className="text-[10px] text-slate-400 font-bold uppercase">Trust Score</p>
+                  <p className="text-base font-black text-slate-900 mt-0.5">100%</p>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -342,6 +448,100 @@ export default function ProfilePage() {
           </div>
         )}
 
+        {/* WORKER SPECIFIC CARDS */}
+        {isWorker && (
+          <>
+            {/* Preferred Work / Trades */}
+            <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200 shadow-xs space-y-3.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Wrench className="w-4 h-4 text-teal-700" />
+                  <h3 className="font-bold text-sm sm:text-base text-slate-900">
+                    What type of work do you prefer to do? (पसंदीदा कार्य)
+                  </h3>
+                </div>
+                <span className="text-[10px] font-bold bg-teal-100 text-teal-800 px-2 py-0.5 rounded-full">
+                  Skill Trades
+                </span>
+              </div>
+              <p className="text-xs text-slate-500">
+                Tap to select trades you want to receive booking orders for:
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  'Electrical & Wiring (बिजली काम)',
+                  'Plumbing & Pipe Fitting (नल और पाइप)',
+                  'Home & Deep Cleaning (सफाई सेवा)',
+                  'AC & Appliance Repair (एसी व उपकरण)',
+                  'Carpentry & Woodwork (बढ़ई काम)',
+                  'Painting & Wall Finishing (पुताई और रंग)'
+                ].map((trade) => {
+                  const isSelected = preferredTrades.includes(trade);
+                  return (
+                    <button
+                      key={trade}
+                      type="button"
+                      onClick={() => handleTradeToggle(trade)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition border cursor-pointer ${
+                        isSelected
+                          ? 'bg-teal-700 text-white border-teal-700 shadow-xs'
+                          : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'
+                      }`}
+                    >
+                      {isSelected ? '✓ ' : '+ '}{trade}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* KYC Verification & Compliance */}
+            <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200 shadow-xs space-y-3.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  <h3 className="font-bold text-sm sm:text-base text-slate-900">
+                    Document KYC & Verification Status
+                  </h3>
+                </div>
+                <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full uppercase">
+                  Verified
+                </span>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 text-xs">
+                <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-100 text-center">
+                  <p className="font-bold text-slate-700">Aadhaar Card</p>
+                  <p className="text-[10px] text-emerald-700 font-bold mt-1">✓ Approved</p>
+                </div>
+                <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-100 text-center">
+                  <p className="font-bold text-slate-700">Skill Proof</p>
+                  <p className="text-[10px] text-emerald-700 font-bold mt-1">✓ Certified</p>
+                </div>
+                <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-100 text-center">
+                  <p className="font-bold text-slate-700">Police Check</p>
+                  <p className="text-[10px] text-emerald-700 font-bold mt-1">✓ Cleared</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Payout & Bank Details */}
+            <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200 shadow-xs space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-sm sm:text-base text-slate-900">Partner Payout Details</h3>
+                <span className="text-[10px] text-slate-400 font-bold">Auto-settlement</span>
+              </div>
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-between text-xs">
+                <div>
+                  <p className="text-slate-400 font-semibold">Registered Payout UPI ID</p>
+                  <p className="font-bold text-slate-900 font-mono mt-0.5">{workerUpi}</p>
+                </div>
+                <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-md">Direct Bank Transfer</span>
+              </div>
+            </div>
+          </>
+        )}
+
         {/* Contact & Personal Information Card */}
         <div className="bg-white rounded-3xl p-5 sm:p-7 border border-slate-200 shadow-xs space-y-4">
           <h3 className="font-bold text-base text-slate-900">Personal & Service Address</h3>
@@ -427,7 +627,7 @@ export default function ProfilePage() {
         </div>
       </div>
 
-      <BottomNav role="customer" />
+      <BottomNav role={isWorker ? 'worker' : 'customer'} />
     </div>
   );
 }

@@ -64,8 +64,8 @@ export async function POST(request: NextRequest) {
       if (!customer) {
         customer = await prisma.user.create({
           data: {
-            phone: '+919876543210',
-            fullName: body.customerName || 'Jeel Patel',
+            phone: body.customerPhone || '+919876543210',
+            fullName: body.customerName || 'Customer',
             role: 'CUSTOMER',
           }
         }).catch(() => null);

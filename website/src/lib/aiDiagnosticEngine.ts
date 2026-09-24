@@ -1,4 +1,4 @@
-/**
+﻿/**
  * SahYog Intelligent AI Diagnostic & Worker Recommendation Engine
  * Trained on 300 Certified Workers Dataset, 2,000-job calibrated dynamic pricing,
  * and 48 Professional Benchmark Labor Rate Guides (INR).
@@ -33,66 +33,6 @@ export function diagnoseUserQuery(rawQuery: string): AIResponse {
   const cities = ['ahmedabad', 'surat', 'vadodara', 'rajkot', 'gandhinagar', 'delhi', 'mumbai', 'bengaluru', 'pune', 'hyderabad'];
   const detectedCity = cities.find(c => lower.includes(c));
   const cityLabel = detectedCity ? detectedCity.charAt(0).toUpperCase() + detectedCity.slice(1) : undefined;
-
-  // ==========================================
-  // A. REAL-TIME OTP & AUTHENTICATION INTELLIGENCE
-  // ==========================================
-  if (
-    lower.includes('otp') || lower.includes('sms') || lower.includes('verify') || 
-    lower.includes('verification') || lower.includes('twilio') || lower.includes('ઓટીપી') || lower.includes('ओटीपी')
-  ) {
-    return {
-      reply: `🔐 **SahYog Real-Time Twilio OTP & Doorstep Security Protocol:**\n\n` +
-        `• **Live Cellular SMS Dispatch:** When you request an OTP, SahYog connects directly via the **Twilio Verify API** to deliver a genuine 4-digit code directly to your phone.\n` +
-        `• **10-Minute Expiration:** All OTP codes are cryptographically generated and expire automatically after 10 minutes for your account security.\n` +
-        `• **🛡️ Two-Way Arrival Safety OTP:** When your booked service partner arrives at your doorstep, you provide them with your unique 4-digit Arrival OTP. The job cannot begin and payment cannot be claimed without this verified handshake!\n` +
-        `• **Troubleshooting & Jury Testing:** If your cellular network delays SMS delivery, click **"Resend Code"** after 30 seconds. For jury presentation testing, verified PIN **1234** is accepted.`,
-      estimatedCost: '100% Free & Secure',
-      actionText: 'Go to SahYog Sign In / Register →',
-      actionHref: '/login',
-      quickFollowUps: ['How does arrival OTP protect me?', 'How to rate worker after service?', 'Electrician in Ahmedabad']
-    };
-  }
-
-  // ==========================================
-  // B. WORKER RATING & FEEDBACK SYSTEM
-  // ==========================================
-  if (
-    lower.includes('rating') || lower.includes('feedback') || lower.includes('review') || 
-    lower.includes('rate worker') || lower.includes('stars') || lower.includes('રિવ્યુ') || lower.includes('रेटિંગ')
-  ) {
-    return {
-      reply: `⭐ **SahYog Dynamic Worker Rating & Review System:**\n\n` +
-        `• **Interactive 1–5 Star Rating:** After any service is completed, customers can rate their partner directly on the Customer Dashboard.\n` +
-        `• **Compliment Badges:** Highlight great performance with badges like *On-Time Arrival*, *Expert Workmanship*, *Clean & Tidy*, and *Polite Behavior*.\n` +
-        `• **Calibrated Dynamic Pricing:** In SahYog, worker ratings are calibrated against 2,000+ benchmark jobs. Top-rated workers (4.8★–5.0★) earn competitive bonuses while maintaining transparent, regulated customer rates!`,
-      estimatedCost: 'Transparent Quality Rating',
-      actionText: 'Open Customer Dashboard to Rate →',
-      actionHref: '/customer/dashboard',
-      quickFollowUps: ['How does arrival OTP protect me?', 'AC service cost', 'Deep cleaning estimate']
-    };
-  }
-
-  // ==========================================
-  // C. DIAGNOSTIC TROUBLESHOOTING & ERROR RESOLUTION
-  // ==========================================
-  if (
-    lower.includes('fix all error') || lower.includes('fix error') || lower.includes('fix the error') || 
-    (lower.includes('error') && lower.includes('otp')) || (lower.includes('issue') && lower.includes('otp'))
-  ) {
-    return {
-      reply: `🛠️ **SahYog OTP & Authentication System Diagnostics:**\n\n` +
-        `✅ **Twilio SMS Gateway:** Connected and operational.\n` +
-        `✅ **Phone Formatting:** Auto-sanitizes 10-digit Indian numbers (` + `+91` + ` country code).\n` +
-        `✅ **Live Database Verification:** Synchronized with cloud Neon PostgreSQL.\n` +
-        `✅ **Doorstep Safety OTP:** Active for all 48 service categories across 300+ certified workers.\n\n` +
-        `*If you are presenting or testing on a device with telecom delay, you can immediately use PIN **1234** to log in smoothly without waiting.*`,
-      estimatedCost: 'Fully Operational',
-      actionText: 'Test OTP Login Now →',
-      actionHref: '/login',
-      quickFollowUps: ['How does arrival OTP protect me?', 'Society water tank cleaning', 'AC repair rates']
-    };
-  }
 
   // ==========================================
   // 1. COMMUNITY & SOCIETY SERVICES

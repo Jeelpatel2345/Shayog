@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { MapPin, Navigation, Compass, Layers, ShieldCheck, User } from 'lucide-react';
+import { Navigation, Compass } from 'lucide-react';
 
 interface RealTrackingMapProps {
   workerName?: string;
@@ -10,7 +10,7 @@ interface RealTrackingMapProps {
 }
 
 export default function RealTrackingMap({
-  workerName = 'Rajesh Kumar (Master Plumber)',
+  workerName = 'Service Partner',
   customerAddress = 'B/402, Shanti Heights, Navrangpura, Ahmedabad',
   initialDistanceKm = 2.4,
 }: RealTrackingMapProps) {
@@ -18,11 +18,15 @@ export default function RealTrackingMap({
   const mapInstanceRef = useRef<any>(null);
   const workerMarkerRef = useRef<any>(null);
   const routeLineRef = useRef<any>(null);
+  const leafletRef = useRef<any>(null);
 
   const [distanceKm, setDistanceKm] = useState(initialDistanceKm);
   const [etaMins, setEtaMins] = useState(8);
   const [mapLoaded, setMapLoaded] = useState(false);
-  const [workerProgress, setWorkerProgress] = useState(0);
+  const [isArrived, setIsArrived] = useState(false);
+
+  // Dynamic first name for compact map pins
+  const partnerFirstName = workerName ? workerName.trim().split(/\s+/)[0] : 'Partner';
 
   // Ahmedabad coordinates
   // Destination: Customer home in Navrangpura
@@ -30,15 +34,62 @@ export default function RealTrackingMap({
   // Origin: Worker starting location near Paldi
   const startCoord: [number, number] = [23.0135, 72.5570];
 
-  // Interpolated waypoints representing actual road path
+  // Granular 10-step road path from Paldi to Navrangpura along C.G. Road
   const waypoints: [number, number][] = [
-    [23.0135, 72.5570],
-    [23.0175, 72.5582],
-    [23.0220, 72.5595],
-    [23.0265, 72.5602],
-    [23.0310, 72.5608],
-    [23.0368, 72.5615],
+    [23.0135, 72.5570], // 0: Paldi Cross Road
+    [23.0162, 72.5578], // 1: Mahalaxmi Cross Road
+    [23.0195, 72.5589], // 2: VS Hospital Approach
+    [23.0224, 72.5596], // 3: Ellis Bridge Circle
+    [23.0252, 72.5601], // 4: Law Garden Junction
+    [23.0280, 72.5605], // 5: C.G. Road Junction
+    [23.0305, 72.5609], // 6: Municipal Market
+    [23.0332, 72.5612], // 7: Swastik Cross Road
+    [23.0352, 72.5614], // 8: Stadium Cross Road
+    [23.0368, 72.5615], // 9: Arrived at Customer Location
   ];
+
+  // Helper to create worker divIcon
+  const createWorkerIcon = (L: any, arrived: boolean) => {
+    if (arrived) {
+      return L.divIcon({
+        className: 'custom-worker-icon',
+        html: `
+          <div style="position: relative; width: 44px; height: 44px;">
+            <div style="position: absolute; width: 44px; height: 44px; border-radius: 50%; background: rgba(16, 185, 129, 0.4); animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+            <div style="background: linear-gradient(135deg, #10b981, #047857); color: white; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(4,120,87,0.6); border: 2.5px solid white; position: absolute; top: 4px; left: 4px;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </div>
+            <div style="position: absolute; top: -16px; left: 50%; transform: translateX(-50%); background: #064e3b; color: #a7f3d0; font-size: 9px; font-weight: 800; padding: 1px 7px; border-radius: 6px; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.25);">
+              ${partnerFirstName} (Arrived)
+            </div>
+          </div>
+        `,
+        iconSize: [44, 44],
+        iconAnchor: [22, 22],
+      });
+    }
+
+    return L.divIcon({
+      className: 'custom-worker-icon',
+      html: `
+        <div style="position: relative; width: 44px; height: 44px;">
+          <div style="position: absolute; width: 44px; height: 44px; border-radius: 50%; background: rgba(245, 158, 11, 0.4); animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+          <div style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #042f2e; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(217,119,6,0.6); border: 2.5px solid white; position: absolute; top: 4px; left: 4px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>
+            </svg>
+          </div>
+          <div style="position: absolute; top: -16px; left: 50%; transform: translateX(-50%); background: #042f2e; color: #6ee7b7; font-size: 9px; font-weight: 800; padding: 1px 6px; border-radius: 6px; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
+            ${partnerFirstName} (En Route)
+          </div>
+        </div>
+      `,
+      iconSize: [44, 44],
+      iconAnchor: [22, 22],
+    });
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -49,8 +100,9 @@ export default function RealTrackingMap({
 
       try {
         const L = (await import('leaflet')).default;
+        leafletRef.current = L;
 
-        // Inject leaflet CSS via link tag (avoids TypeScript module resolution issues)
+        // Inject leaflet CSS via link tag
         if (!document.querySelector('#leaflet-css')) {
           const link = document.createElement('link');
           link.id = 'leaflet-css';
@@ -59,13 +111,12 @@ export default function RealTrackingMap({
           link.integrity = 'sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=';
           link.crossOrigin = '';
           document.head.appendChild(link);
-          // Wait a tick for CSS to register
           await new Promise((r) => setTimeout(r, 50));
         }
 
         if (!isMounted || mapInstanceRef.current) return;
 
-        // Create Leaflet Map centered between worker & customer
+        // Center between worker start and customer
         const midLat = (startCoord[0] + customerCoord[0]) / 2;
         const midLng = (startCoord[1] + customerCoord[1]) / 2;
 
@@ -78,16 +129,15 @@ export default function RealTrackingMap({
 
         mapInstanceRef.current = map;
 
-        // Clean modern OpenStreetMap tiles
+        // OpenStreetMap tiles
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 19,
           subdomains: ['a', 'b', 'c'],
         }).addTo(map);
 
-        // Add Zoom control at top right
         L.control.zoom({ position: 'topright' }).addTo(map);
 
-        // Customer Marker (Home / Green Pin)
+        // Customer Marker
         const customerIcon = L.divIcon({
           className: 'custom-customer-icon',
           html: `
@@ -97,7 +147,7 @@ export default function RealTrackingMap({
                 <polyline points="9 22 9 12 15 12 15 22"></polyline>
               </svg>
               <div style="position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); background: #042f2e; color: #fef08a; font-size: 9px; font-weight: bold; padding: 2px 6px; border-radius: 6px; white-space: nowrap; border: 1px solid rgba(255,255,255,0.2);">
-                Your Home
+                Service Address
               </div>
             </div>
           `,
@@ -107,32 +157,13 @@ export default function RealTrackingMap({
 
         L.marker(customerCoord, { icon: customerIcon })
           .addTo(map)
-          .bindPopup(`<b>Your Address</b><br/>${customerAddress}`);
+          .bindPopup(`<b>Service Location</b><br/>${customerAddress}`);
 
-        // Worker Marker (Animated Vehicle / Amber Badge)
-        const workerIcon = L.divIcon({
-          className: 'custom-worker-icon',
-          html: `
-            <div style="position: relative; width: 44px; height: 44px;">
-              <div style="position: absolute; width: 44px; height: 44px; border-radius: 50%; background: rgba(245, 158, 11, 0.35); animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
-              <div style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #042f2e; width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(217,119,6,0.6); border: 2.5px solid white; position: absolute; top: 4px; left: 4px;">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>
-                </svg>
-              </div>
-              <div style="position: absolute; top: -16px; left: 50%; transform: translateX(-50%); background: #042f2e; color: #6ee7b7; font-size: 9px; font-weight: 800; padding: 1px 6px; border-radius: 6px; white-space: nowrap; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
-                Rajesh (Moving)
-              </div>
-            </div>
-          `,
-          iconSize: [44, 44],
-          iconAnchor: [22, 22],
-        });
-
-        const workerMarker = L.marker(startCoord, { icon: workerIcon }).addTo(map);
+        // Worker Marker
+        const workerMarker = L.marker(startCoord, { icon: createWorkerIcon(L, false) }).addTo(map);
         workerMarkerRef.current = workerMarker;
 
-        // Connecting Route Polyline (Teal glowing line)
+        // Route Polyline
         const routeLine = L.polyline(waypoints, {
           color: '#0d9488',
           weight: 5,
@@ -141,9 +172,7 @@ export default function RealTrackingMap({
         }).addTo(map);
         routeLineRef.current = routeLine;
 
-        // Fit map bounds to show full route comfortably
         map.fitBounds(routeLine.getBounds(), { padding: [40, 40] });
-
         setMapLoaded(true);
       } catch (err) {
         console.error('Leaflet load error:', err);
@@ -161,33 +190,43 @@ export default function RealTrackingMap({
     };
   }, []);
 
-  // Simulate real-time worker movement along the waypoints
+  // Automated Real-Time Worker GPS Movement Along Waypoints
   useEffect(() => {
     if (!mapLoaded) return;
 
+    let currentIndex = 0;
+    const totalWaypoints = waypoints.length;
+
     const interval = setInterval(() => {
-      setWorkerProgress((prev) => {
-        const next = prev >= waypoints.length - 1 ? 0 : prev + 1;
-        const currentCoord = waypoints[next];
+      if (currentIndex < totalWaypoints - 1) {
+        currentIndex += 1;
+        const currentCoord = waypoints[currentIndex];
 
         if (workerMarkerRef.current) {
           workerMarkerRef.current.setLatLng(currentCoord);
         }
 
-        // Calculate remaining distance and ETA
-        const remainingFraction = (waypoints.length - 1 - next) / (waypoints.length - 1);
-        const newDist = Math.max(0.4, Number((initialDistanceKm * remainingFraction).toFixed(1)));
-        const newEta = Math.max(2, Math.round(8 * remainingFraction));
+        // Calculate real-time dynamic distance and ETA
+        const remainingFraction = (totalWaypoints - 1 - currentIndex) / (totalWaypoints - 1);
+        const newDist = Number((initialDistanceKm * remainingFraction).toFixed(1));
+        const newEta = Math.round(8 * remainingFraction);
 
-        setDistanceKm(newDist);
-        setEtaMins(newEta);
-
-        return next;
-      });
-    }, 4000);
+        if (currentIndex === totalWaypoints - 1) {
+          setIsArrived(true);
+          setDistanceKm(0.0);
+          setEtaMins(0);
+          if (leafletRef.current && workerMarkerRef.current) {
+            workerMarkerRef.current.setIcon(createWorkerIcon(leafletRef.current, true));
+          }
+        } else {
+          setDistanceKm(Math.max(0.1, newDist));
+          setEtaMins(Math.max(1, newEta));
+        }
+      }
+    }, 2500);
 
     return () => clearInterval(interval);
-  }, [mapLoaded]);
+  }, [mapLoaded, initialDistanceKm]);
 
   const handleRecenter = () => {
     if (mapInstanceRef.current && routeLineRef.current) {
@@ -214,7 +253,7 @@ export default function RealTrackingMap({
 
         <button
           onClick={handleRecenter}
-          className="bg-white hover:bg-slate-50 text-slate-700 p-2 rounded-xl shadow-md border border-slate-200 text-xs font-bold flex items-center gap-1 transition pointer-events-auto active:scale-95"
+          className="bg-white hover:bg-slate-50 text-slate-700 p-2 rounded-xl shadow-md border border-slate-200 text-xs font-bold flex items-center gap-1 transition pointer-events-auto active:scale-95 cursor-pointer"
           title="Recenter Map"
         >
           <Compass className="w-4 h-4 text-teal-700" />
@@ -225,22 +264,28 @@ export default function RealTrackingMap({
       {/* Bottom Floating Route Info Bar */}
       <div className="absolute bottom-3 left-3 right-3 z-10 bg-white/95 backdrop-blur-md rounded-2xl p-2.5 shadow-lg border border-slate-200 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-700 flex-shrink-0">
-            <Navigation className="w-4 h-4 animate-pulse" />
+          <div className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ${
+            isArrived ? 'bg-emerald-100 text-emerald-700 border border-emerald-300' : 'bg-teal-50 border border-teal-200 text-teal-700'
+          }`}>
+            <Navigation className={`w-4 h-4 ${isArrived ? '' : 'animate-pulse'}`} />
           </div>
           <div>
             <p className="text-[11px] font-black text-slate-900 leading-tight">
-              {distanceKm} km away • {etaMins} mins ETA
+              {isArrived ? '0.0 km away • Arrived' : `${distanceKm} km away • ~${etaMins} mins ETA`}
             </p>
             <p className="text-[10px] text-slate-500 truncate max-w-[180px] sm:max-w-xs">
-              Navrangpura Route via CG Road
+              {isArrived ? 'Partner has reached customer location' : 'Navrangpura Route via C.G. Road'}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-1.5">
-          <span className="text-[10px] font-bold bg-amber-50 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-lg">
-            En Route
+          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-lg border ${
+            isArrived 
+              ? 'bg-emerald-100 text-emerald-900 border-emerald-300 font-extrabold'
+              : 'bg-amber-50 text-amber-900 border-amber-300'
+          }`}>
+            {isArrived ? '✓ Arrived' : 'En Route'}
           </span>
         </div>
       </div>

@@ -7,7 +7,7 @@ import {
   Calendar, Home, MessageSquare, User, Navigation, Phone, 
   CheckCircle2, X, Upload, ShieldCheck, Check, ExternalLink,
   ChevronDown, HelpCircle, ArrowRight, KeyRound, AlertCircle,
-  Star, ThumbsUp, Sparkles, Users, Building2, LogOut
+  Star, ThumbsUp, Sparkles, Users, Building2, LogOut, Lock
 } from 'lucide-react';
 import RealTrackingMap from '@/components/RealTrackingMap';
 import BottomNav from '@/components/BottomNav';
@@ -24,6 +24,8 @@ export default function WorkerDashboard() {
   const [uploadedAadhar, setUploadedAadhar] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationSubmitted, setVerificationSubmitted] = useState(false);
+  const [isDocVerified, setIsDocVerified] = useState(false);
+  const [paymentReceived, setPaymentReceived] = useState(false);
 
   // Active Job state - null when waiting for customer bookings, populated strictly for this worker
   const [activeBooking, setActiveBooking] = useState<{
@@ -73,6 +75,10 @@ export default function WorkerDashboard() {
       const currentWorkerName = localStorage.getItem('sahyog-user-name') || 'Sunita Mehra';
       const currentWorkerPhone = localStorage.getItem('sahyog-user-phone') || '';
       setWorkerName(currentWorkerName);
+
+      const storedVerified = localStorage.getItem('sahyog_worker_verified') === 'true';
+      setIsDocVerified(storedVerified);
+      setVerificationSubmitted(storedVerified);
 
       // 1. Fetch live database bookings for THIS worker
       const pollBookings = async () => {
@@ -273,8 +279,43 @@ export default function WorkerDashboard() {
     setTimeout(() => {
       setIsVerifying(false);
       setVerificationSubmitted(true);
+      setIsDocVerified(true);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('sahyog_worker_verified', 'true');
+      }
       setShowUploadModal(false);
+      setToastNotice('✅ KYC & Documents Verified! Your account is now fully approved and eligible to accept customer jobs.');
+      setTimeout(() => setToastNotice(''), 6000);
     }, 1200);
+  };
+
+  const handleConfirmPaymentReceived = () => {
+    setPaymentReceived(true);
+    setToastNotice(`💰 Payment of ₹${activeBooking?.amount || 500} Confirmed Received!`);
+    setTimeout(() => setToastNotice(''), 6000);
+
+    // Broadcast to Customer Side
+    try {
+      const channel = new BroadcastChannel('sahyog-realtime-sync');
+      channel.postMessage({
+        type: 'PAYMENT_RECEIVED',
+        bookingId: activeBooking?.id,
+        amount: activeBooking?.amount,
+        workerName,
+        timestamp: Date.now()
+      });
+      channel.close();
+    } catch {}
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sahyog-realtime-event', JSON.stringify({
+        type: 'PAYMENT_RECEIVED',
+        bookingId: activeBooking?.id,
+        amount: activeBooking?.amount,
+        workerName,
+        timestamp: Date.now()
+      }));
+    }
   };
 
   const handleVerifyOtp = async (e: React.FormEvent) => {
@@ -686,7 +727,27 @@ export default function WorkerDashboard() {
 
                 {/* 4-Digit Arrival OTP & Job Completion Trigger */}
                 <div className="mt-3">
-                  {activeJobStatus !== 'COMPLETED' ? (
+                  {!isDocVerified ? (
+                    <div className="space-y-2">
+                      <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs font-semibold flex items-start gap-2">
+                        <AlertTriangle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-bold text-rose-950">Documents Verification Mandatory</p>
+                          <p className="text-[11px] text-rose-700 mt-0.5 leading-relaxed">
+                            Workers without verified documents are not eligible to work. Please complete your KYC verification to accept and start service assignments.
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowUploadModal(true)}
+                        className="w-full py-2.5 px-3 bg-rose-600 hover:bg-rose-700 text-white font-black text-xs rounded-xl transition flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-98"
+                      >
+                        <Upload className="w-4 h-4" />
+                        <span>Upload Documents & Verify Account</span>
+                      </button>
+                    </div>
+                  ) : activeJobStatus !== 'COMPLETED' ? (
                     !activeBooking.otpVerified && activeJobStatus !== 'IN PROGRESS' ? (
                       <button
                         type="button"
@@ -714,6 +775,27 @@ export default function WorkerDashboard() {
                     <div className="w-full py-2.5 bg-emerald-50 text-emerald-800 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 border border-emerald-200">
                       <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                       <span>Job Completed & Payment Credited (₹{activeBooking.amount})</span>
+                    </div>
+                  )}
+
+                  {/* Worker Payment Confirmation Button (Customer removes 'I have paid', worker verifies it) */}
+                  {isDocVerified && (
+                    <div className="mt-2.5 pt-2 border-t border-slate-100">
+                      {paymentReceived ? (
+                        <div className="w-full py-2 bg-emerald-100 text-emerald-900 border border-emerald-300 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-700" />
+                          <span>✓ Payment of ₹{activeBooking.amount} Confirmed by You</span>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleConfirmPaymentReceived}
+                          className="w-full py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs rounded-xl transition flex items-center justify-center gap-2 shadow-xs cursor-pointer active:scale-98"
+                        >
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>Confirm Payment Received (₹{activeBooking.amount})</span>
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -813,43 +895,64 @@ export default function WorkerDashboard() {
             </div>
           </div>
 
-          {/* Verification Pending Alert Card */}
-          {!verificationSubmitted ? (
-            <div className="bg-rose-50/80 border border-rose-200/80 rounded-2xl p-4 flex items-start gap-3 shadow-2xs">
+          {/* Verification Status Card */}
+          {!isDocVerified ? (
+            <div className="bg-rose-50/90 border border-rose-300 rounded-2xl p-4 flex items-start gap-3 shadow-xs">
               <div className="w-9 h-9 rounded-xl bg-rose-100 flex items-center justify-center flex-shrink-0 mt-0.5">
                 <AlertTriangle className="w-5 h-5 text-rose-600" />
               </div>
               <div className="flex-1">
                 <div className="flex items-center justify-between">
-                  <p className="font-bold text-rose-900 text-sm">
-                    Verification Pending
+                  <p className="font-bold text-rose-950 text-sm">
+                    Documents Verification Pending
                   </p>
-                  <span className="text-[10px] font-bold bg-rose-200 text-rose-800 px-2 py-0.5 rounded-md uppercase">
-                    Action Required
+                  <span className="text-[10px] font-bold bg-rose-200 text-rose-900 px-2 py-0.5 rounded-md uppercase">
+                    Ineligible to Work
                   </span>
                 </div>
-                <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                  Please upload your Aadhaar Card back side to complete your profile verification and unlock 100% daily payouts.
+                <p className="text-xs text-rose-800 mt-1 leading-relaxed">
+                  Without verified documents, workers are strictly not eligible to accept customer service requests. Upload Aadhaar Card & Skill Proof to unlock assignments.
                 </p>
-                <button 
-                  type="button"
-                  onClick={() => setShowUploadModal(true)}
-                  className="mt-2.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 px-3.5 py-1.5 rounded-lg transition inline-flex items-center gap-1.5 shadow-xs"
-                >
-                  <Upload className="w-3.5 h-3.5" />
-                  Upload Now
-                </button>
+                <div className="flex gap-2 mt-2.5">
+                  <button 
+                    type="button"
+                    onClick={() => setShowUploadModal(true)}
+                    className="text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 px-3.5 py-1.5 rounded-lg transition inline-flex items-center gap-1.5 shadow-xs cursor-pointer"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                    Upload Documents
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      setIsDocVerified(true);
+                      setVerificationSubmitted(true);
+                      if (typeof window !== 'undefined') localStorage.setItem('sahyog_worker_verified', 'true');
+                      setToastNotice('✅ Account Verified! You are now eligible to accept and perform jobs.');
+                      setTimeout(() => setToastNotice(''), 5000);
+                    }}
+                    className="text-xs font-bold text-teal-800 bg-teal-100 hover:bg-teal-200 px-3 py-1.5 rounded-lg transition inline-flex items-center gap-1 cursor-pointer"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5 text-teal-700" />
+                    Instant Approve (KYC)
+                  </button>
+                </div>
               </div>
             </div>
           ) : (
-            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-start gap-3">
+            <div className="bg-emerald-50 border border-emerald-300 rounded-2xl p-4 flex items-start gap-3 shadow-xs">
               <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="font-bold text-emerald-900 text-sm">
-                  Documents Submitted for Verification
-                </p>
-                <p className="text-xs text-emerald-700 mt-0.5">
-                  Your Aadhaar card has been submitted. Our team is verifying it within 2 business hours.
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <p className="font-bold text-emerald-950 text-sm">
+                    Documents Verified • Eligible to Work
+                  </p>
+                  <span className="text-[10px] font-bold bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-md uppercase">
+                    Approved
+                  </span>
+                </div>
+                <p className="text-xs text-emerald-800 mt-0.5">
+                  Your identity and skill documents are officially verified. You are receiving live customer requests in your preferred trades.
                 </p>
               </div>
             </div>

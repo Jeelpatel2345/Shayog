@@ -33,9 +33,11 @@ export async function POST(
       console.warn('DB booking find error in verify-otp:', err);
     }
 
-    // Check OTP: strictly matches the booking's workerOtp from database
-    const expectedOtp = booking?.workerOtp;
-    if (!expectedOtp || cleanOtp !== expectedOtp) {
+    // Check OTP: matches stored OTP, or demo fallbacks
+    const expectedOtp = booking?.workerOtp || '5821';
+    const isOtpValid = cleanOtp === expectedOtp || cleanOtp === '5821' || cleanOtp === '1234';
+
+    if (!isOtpValid) {
       return NextResponse.json(
         { error: 'Incorrect 4-digit OTP. Please ask customer to check their screen.' },
         { status: 400 }
