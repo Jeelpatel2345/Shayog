@@ -5,10 +5,10 @@ import Link from 'next/link';
 import { 
   Search, MapPin, Sparkles, ShieldCheck, Star, Clock, 
   ArrowRight, CheckCircle2, ChevronRight, Users, Award, 
-  Smartphone, Wrench, Zap, Cpu, Hammer, Paintbrush, Shield, Building2 
+  Smartphone, Wrench, Zap, Cpu, Hammer, Paintbrush, Shield, Building2, Building 
 } from 'lucide-react';
 import { serviceCategories, allWorkers } from '@/data/workersData';
-import { communityPackages } from '@/data/communityData';
+import { communityPackages, registeredSocieties } from '@/data/communityData';
 
 const iconMap: Record<string, any> = {
   Sparkles,
@@ -45,17 +45,27 @@ export default function HomePage() {
             <div className="lg:col-span-7 space-y-6 text-left">
               <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-4 py-1.5 text-xs font-bold text-amber-300">
                 <Sparkles className="w-4 h-4 text-amber-300" />
-                <span>India's Most Trusted Home Services Network</span>
+                <span>{scope === 'COMMUNITY' ? '🏢 RERA & Co-operative Housing Society Approved Network' : "India's Most Trusted Home Services Network"}</span>
               </div>
 
               <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.1] text-white">
-                Skilled Hands for Your Home, <br className="hidden sm:block" />
-                <span className="text-amber-300">Right on Demand.</span>
+                {scope === 'COMMUNITY' ? (
+                  <>
+                    Industrial Maintenance Squads, <br className="hidden sm:block" />
+                    <span className="text-amber-300">Tailored for Your Society.</span>
+                  </>
+                ) : (
+                  <>
+                    Skilled Hands for Your Home, <br className="hidden sm:block" />
+                    <span className="text-amber-300">Right on Demand.</span>
+                  </>
+                )}
               </h1>
 
               <p className="text-base sm:text-lg text-emerald-100/90 leading-relaxed max-w-2xl">
-                Book background-verified electricians, plumbers, cleaners, painters, and carpenters in minutes. 
-                Transparent hourly rates, direct UPI payments, and guaranteed satisfaction across Gujarat.
+                {scope === 'COMMUNITY'
+                  ? 'Deploy background-verified industrial worker crews for society water tanks, common area pressure washing, storm drains, and comprehensive AMCs across Gujarat.'
+                  : 'Book background-verified electricians, plumbers, cleaners, painters, and carpenters in minutes. Transparent hourly rates, direct UPI payments, and guaranteed satisfaction across Gujarat.'}
               </p>
 
               {/* Scope Selector: Individual vs Community */}
@@ -118,10 +128,10 @@ export default function HomePage() {
                 </div>
 
                 <Link
-                  href={'/services?search=' + encodeURIComponent(searchQuery || (scope === 'COMMUNITY' ? 'Society' : '')) + (selectedCity !== 'All Cities' ? '&city=' + encodeURIComponent(selectedCity) : '')}
+                  href={scope === 'COMMUNITY' ? '/community' : ('/services?search=' + encodeURIComponent(searchQuery) + (selectedCity !== 'All Cities' ? '&city=' + encodeURIComponent(selectedCity) : ''))}
                   className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs sm:text-sm px-6 py-3 rounded-xl transition flex-shrink-0 w-full sm:w-auto text-center flex items-center justify-center gap-1.5 shadow-md"
                 >
-                  <span>Search</span>
+                  <span>{scope === 'COMMUNITY' ? 'Explore Society Hub' : 'Search'}</span>
                   <ArrowRight className="w-4 h-4" />
                 </Link>
               </div>
@@ -135,7 +145,7 @@ export default function HomePage() {
                 ).map((tag) => (
                   <Link
                     key={tag}
-                    href={'/services?search=' + encodeURIComponent(tag)}
+                    href={scope === 'COMMUNITY' ? '/community' : ('/services?search=' + encodeURIComponent(tag))}
                     className="bg-white/10 hover:bg-white/20 border border-white/15 px-3 py-1 rounded-full text-white transition"
                   >
                     {tag}
@@ -149,7 +159,7 @@ export default function HomePage() {
               <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-6 sm:p-8 text-white space-y-6 shadow-2xl">
                 <div className="flex items-center justify-between border-b border-white/15 pb-4">
                   <span className="text-xs uppercase font-bold text-amber-300 tracking-wider">
-                    Live Network Metrics
+                    {scope === 'COMMUNITY' ? 'Society Network Metrics' : 'Live Network Metrics'}
                   </span>
                   <span className="flex items-center gap-1.5 text-xs text-emerald-300 font-semibold">
                     <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -158,31 +168,57 @@ export default function HomePage() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-emerald-950/50 border border-white/10 rounded-2xl p-4">
-                    <div className="text-3xl font-black text-amber-400">100+</div>
-                    <div className="text-xs text-emerald-200 mt-1 font-medium">Verified Professionals</div>
-                  </div>
-                  <div className="bg-emerald-950/50 border border-white/10 rounded-2xl p-4">
-                    <div className="text-3xl font-black text-white">6</div>
-                    <div className="text-xs text-emerald-200 mt-1 font-medium">Service Categories</div>
-                  </div>
-                  <div className="bg-emerald-950/50 border border-white/10 rounded-2xl p-4">
-                    <div className="text-3xl font-black text-white">4.8★</div>
-                    <div className="text-xs text-emerald-200 mt-1 font-medium">Average Customer Rating</div>
-                  </div>
-                  <div className="bg-emerald-950/50 border border-white/10 rounded-2xl p-4">
-                    <div className="text-3xl font-black text-amber-400">15 Min</div>
-                    <div className="text-xs text-emerald-200 mt-1 font-medium">Avg Arrival Confirmation</div>
-                  </div>
+                  {scope === 'COMMUNITY' ? (
+                    <>
+                      <div className="bg-emerald-950/50 border border-white/10 rounded-2xl p-4">
+                        <div className="text-3xl font-black text-amber-400">4 Squads</div>
+                        <div className="text-xs text-emerald-200 mt-1 font-medium">Industrial Crews</div>
+                      </div>
+                      <div className="bg-emerald-950/50 border border-white/10 rounded-2xl p-4">
+                        <div className="text-3xl font-black text-white">4 Pkgs</div>
+                        <div className="text-xs text-emerald-200 mt-1 font-medium">Society AMC Plans</div>
+                      </div>
+                      <div className="bg-emerald-950/50 border border-white/10 rounded-2xl p-4">
+                        <div className="text-3xl font-black text-white">25-30%</div>
+                        <div className="text-xs text-emerald-200 mt-1 font-medium">Bulk Pool Savings</div>
+                      </div>
+                      <div className="bg-emerald-950/50 border border-white/10 rounded-2xl p-4">
+                        <div className="text-3xl font-black text-amber-400">Instant</div>
+                        <div className="text-xs text-emerald-200 mt-1 font-medium">Gate Security Pass</div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="bg-emerald-950/50 border border-white/10 rounded-2xl p-4">
+                        <div className="text-3xl font-black text-amber-400">100+</div>
+                        <div className="text-xs text-emerald-200 mt-1 font-medium">Verified Professionals</div>
+                      </div>
+                      <div className="bg-emerald-950/50 border border-white/10 rounded-2xl p-4">
+                        <div className="text-3xl font-black text-white">6</div>
+                        <div className="text-xs text-emerald-200 mt-1 font-medium">Service Categories</div>
+                      </div>
+                      <div className="bg-emerald-950/50 border border-white/10 rounded-2xl p-4">
+                        <div className="text-3xl font-black text-white">4.8★</div>
+                        <div className="text-xs text-emerald-200 mt-1 font-medium">Average Customer Rating</div>
+                      </div>
+                      <div className="bg-emerald-950/50 border border-white/10 rounded-2xl p-4">
+                        <div className="text-3xl font-black text-amber-400">15 Min</div>
+                        <div className="text-xs text-emerald-200 mt-1 font-medium">Avg Arrival Confirmation</div>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <div className="pt-2 border-t border-white/15 flex items-center justify-between text-xs text-emerald-200">
                   <div className="flex items-center gap-2">
                     <ShieldCheck className="w-4 h-4 text-amber-400" />
-                    <span>Aadhaar Police-Cleared</span>
+                    <span>{scope === 'COMMUNITY' ? 'RERA Co-op Cleared' : 'Aadhaar Police-Cleared'}</span>
                   </div>
-                  <Link href="/services" className="text-amber-300 font-bold hover:underline flex items-center gap-1">
-                    <span>Browse All</span>
+                  <Link 
+                    href={scope === 'COMMUNITY' ? '/community' : '/services'} 
+                    className="text-amber-300 font-bold hover:underline flex items-center gap-1"
+                  >
+                    <span>{scope === 'COMMUNITY' ? 'Open Society Hub' : 'Browse All'}</span>
                     <ChevronRight className="w-3 h-3" />
                   </Link>
                 </div>
@@ -389,13 +425,15 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
           <div className="text-center max-w-2xl mx-auto">
             <span className="text-xs uppercase tracking-wider font-bold text-teal-700 bg-teal-50 border border-teal-200 px-3 py-1 rounded-full">
-              Simple 3-Step Process
+              {scope === 'COMMUNITY' ? '🏢 Society AMC & Crew Workflow' : 'Simple 3-Step Process'}
             </span>
             <h2 className="text-3xl sm:text-4xl font-black text-slate-900 mt-3 tracking-tight">
-              How SahYog Works
+              {scope === 'COMMUNITY' ? 'How Community & Society Service Works' : 'How SahYog Works'}
             </h2>
             <p className="text-sm text-slate-600 mt-2">
-              Effortless booking from your desktop or phone. No hidden fees.
+              {scope === 'COMMUNITY'
+                ? 'End-to-end multi-worker squad dispatch with society security gate clearance and committee reports.'
+                : 'Effortless booking from your desktop or phone. No hidden fees.'}
             </p>
           </div>
 
@@ -404,9 +442,13 @@ export default function HomePage() {
               <div className="w-12 h-12 bg-teal-700 text-white rounded-2xl flex items-center justify-center font-black text-lg mx-auto shadow-md">
                 1
               </div>
-              <h3 className="text-xl font-bold text-slate-900">Choose Your Service & Worker</h3>
+              <h3 className="text-xl font-bold text-slate-900">
+                {scope === 'COMMUNITY' ? 'Select Society & Squad Package' : 'Choose Your Service & Worker'}
+              </h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Filter from 100+ verified professionals based on real customer ratings, city, hourly rates, and skills.
+                {scope === 'COMMUNITY'
+                  ? 'Choose your registered apartment complex and select multi-worker squads for water tanks, drainage, or society AMC.'
+                  : 'Filter from 100+ verified professionals based on real customer ratings, city, hourly rates, and skills.'}
               </p>
             </div>
 
@@ -414,9 +456,13 @@ export default function HomePage() {
               <div className="w-12 h-12 bg-amber-400 text-emerald-950 rounded-2xl flex items-center justify-center font-black text-lg mx-auto shadow-md">
                 2
               </div>
-              <h3 className="text-xl font-bold text-slate-900">Select Time & Duration</h3>
+              <h3 className="text-xl font-bold text-slate-900">
+                {scope === 'COMMUNITY' ? 'Schedule & Authorize Work Scope' : 'Select Time & Duration'}
+              </h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Pick your preferred time slot and duration (hourly, 4 hours, or whole day). The price updates automatically.
+                {scope === 'COMMUNITY'
+                  ? 'Select towers and schedule date. Settle seamlessly via Society Maintenance Pool or instant UPI.'
+                  : 'Pick your preferred time slot and duration (hourly, 4 hours, or whole day). The price updates automatically.'}
               </p>
             </div>
 
@@ -424,101 +470,172 @@ export default function HomePage() {
               <div className="w-12 h-12 bg-emerald-700 text-white rounded-2xl flex items-center justify-center font-black text-lg mx-auto shadow-md">
                 3
               </div>
-              <h3 className="text-xl font-bold text-slate-900">Pay After Service Satisfaction</h3>
+              <h3 className="text-xl font-bold text-slate-900">
+                {scope === 'COMMUNITY' ? 'Gate Pass OTP & Completion Report' : 'Pay After Service Satisfaction'}
+              </h3>
               <p className="text-xs text-slate-600 leading-relaxed">
-                Worker arrives on time. Share arrival OTP, get the job done, and pay via UPI or cash with platform protection.
+                {scope === 'COMMUNITY'
+                  ? 'Squad arrives with full PPE & industrial tools. Share gate OTP, review completed checklist, and receive compliance certificate.'
+                  : 'Worker arrives on time. Share arrival OTP, get the job done, and pay via UPI or cash with platform protection.'}
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Featured Professionals Preview */}
+      {/* Featured Section */}
       <section className="py-20 bg-slate-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
               <span className="text-xs uppercase tracking-wider font-bold text-teal-700 bg-teal-50 border border-teal-200 px-3 py-1 rounded-full">
-                Top Rated Partners
+                {scope === 'COMMUNITY' ? '🏢 Registered Housing Societies' : 'Top Rated Partners'}
               </span>
               <h2 className="text-3xl sm:text-4xl font-black text-slate-900 mt-3 tracking-tight">
-                Featured Professionals Near You
+                {scope === 'COMMUNITY' ? 'Active Societies & Certified Squad Leads' : 'Featured Professionals Near You'}
               </h2>
               <p className="text-sm text-slate-600 mt-1 max-w-xl">
-                Handpicked 5-star service providers with proven track records.
+                {scope === 'COMMUNITY'
+                  ? 'Premier residential apartments and cooperative societies serviced by SahYog multi-worker crews with full security gate integration.'
+                  : 'Handpicked 5-star service providers with proven track records.'}
               </p>
             </div>
             <Link
-              href="/services"
+              href={scope === 'COMMUNITY' ? '/community' : '/services'}
               className="inline-flex items-center gap-2 bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs px-5 py-2.5 rounded-xl transition shadow-sm"
             >
-              <span>Explore All 100 Workers</span>
+              <span>{scope === 'COMMUNITY' ? 'Open Dedicated Society Hub' : 'Explore All 100 Workers'}</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {featuredWorkers.map((w) => (
-              <div
-                key={w.id}
-                className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs hover:shadow-lg transition space-y-5 flex flex-col justify-between"
-              >
-                <div className="space-y-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-teal-700 to-emerald-800 text-white font-black text-base flex items-center justify-center shadow-md">
-                        {getInitials(w.name)}
-                      </div>
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <h4 className="font-bold text-slate-900 text-base">{w.name}</h4>
-                          <ShieldCheck className="w-4 h-4 text-teal-600" />
+          {scope === 'COMMUNITY' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {registeredSocieties.map((s) => (
+                <div
+                  key={s.id}
+                  className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs hover:shadow-lg transition space-y-5 flex flex-col justify-between"
+                >
+                  <div className="space-y-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-teal-800 to-emerald-900 text-amber-300 font-black text-base flex items-center justify-center shadow-md">
+                          <Building className="w-6 h-6" />
                         </div>
-                        <p className="text-xs text-teal-700 font-semibold">{w.title}</p>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <h4 className="font-bold text-slate-900 text-base">{s.name}</h4>
+                            <ShieldCheck className="w-4 h-4 text-teal-600" />
+                          </div>
+                          <p className="text-xs text-teal-700 font-semibold">{s.communityType}</p>
+                        </div>
+                      </div>
+                      <span className="text-xs font-black bg-amber-50 text-amber-800 border border-amber-200 px-2.5 py-1 rounded-full">
+                        {s.totalFlats} Flats
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-slate-600 leading-relaxed">
+                      {s.fullAddress}, {s.locality}, {s.city} - {s.pincode}
+                    </p>
+
+                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200 text-xs space-y-1">
+                      <div className="flex items-center justify-between text-slate-700">
+                        <span className="font-bold">Secretary:</span>
+                        <span>{s.authorizedRepresentative.name}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-slate-700">
+                        <span className="font-bold">Security Gate:</span>
+                        <span>{s.securityGate}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-emerald-700 font-bold">
+                        <span>Pre-cleared Entry:</span>
+                        <span>✓ Active Gate Pass</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full text-xs font-black text-amber-700">
-                      <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                      <span>{w.rating}</span>
-                    </div>
                   </div>
 
-                  <p className="text-xs text-slate-600 leading-relaxed line-clamp-2">
-                    {w.bio}
-                  </p>
+                  <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                    <div>
+                      <span className="text-[11px] text-slate-400 block font-medium">Bulk Society AMC</span>
+                      <span className="text-sm font-black text-emerald-800">Up to 30% Off</span>
+                    </div>
 
-                  <div className="flex items-center gap-4 text-xs text-slate-500 font-medium pt-2 border-t border-slate-100">
-                    <div className="flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5 text-slate-400" />
-                      <span>{(w.exp + " yrs exp")}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                      <span>{w.city}</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-teal-700 font-bold ml-auto">
-                      <span>{w.reviewsCount}+ jobs</span>
-                    </div>
+                    <Link
+                      href="/community"
+                      className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition flex items-center gap-1.5 shadow-sm"
+                    >
+                      <span>Deploy Squad</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
                   </div>
                 </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {featuredWorkers.map((w) => (
+                <div
+                  key={w.id}
+                  className="bg-white rounded-3xl p-6 border border-slate-200 shadow-xs hover:shadow-lg transition space-y-5 flex flex-col justify-between"
+                >
+                  <div className="space-y-4">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-teal-700 to-emerald-800 text-white font-black text-base flex items-center justify-center shadow-md">
+                          {getInitials(w.name)}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <h4 className="font-bold text-slate-900 text-base">{w.name}</h4>
+                            <ShieldCheck className="w-4 h-4 text-teal-600" />
+                          </div>
+                          <p className="text-xs text-teal-700 font-semibold">{w.title}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full text-xs font-black text-amber-700">
+                        <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                        <span>{w.rating}</span>
+                      </div>
+                    </div>
 
-                <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-                  <div>
-                    <span className="text-[11px] text-slate-400 block font-medium">Starting from</span>
-                    <span className="text-lg font-black text-slate-900">₹{w.rate}<span className="text-xs font-normal text-slate-500">/hr</span></span>
+                    <p className="text-xs text-slate-600 leading-relaxed line-clamp-2">
+                      {w.bio}
+                    </p>
+
+                    <div className="flex items-center gap-4 text-xs text-slate-500 font-medium pt-2 border-t border-slate-100">
+                      <div className="flex items-center gap-1">
+                        <Clock className="w-3.5 h-3.5 text-slate-400" />
+                        <span>{(w.exp + " yrs exp")}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                        <span>{w.city}</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-teal-700 font-bold ml-auto">
+                        <span>{w.reviewsCount}+ jobs</span>
+                      </div>
+                    </div>
                   </div>
 
-                  <Link
-                    href={'/book/' + w.id}
-                    className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition flex items-center gap-1.5 shadow-sm"
-                  >
-                    <span>Book Now</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
+                  <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                    <div>
+                      <span className="text-[11px] text-slate-400 block font-medium">Starting from</span>
+                      <span className="text-lg font-black text-slate-900">₹{w.rate}<span className="text-xs font-normal text-slate-500">/hr</span></span>
+                    </div>
+
+                    <Link
+                      href={'/book/' + w.id}
+                      className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition flex items-center gap-1.5 shadow-sm"
+                    >
+                      <span>Book Now</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

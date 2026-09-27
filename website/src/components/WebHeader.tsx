@@ -99,14 +99,7 @@ export default function WebHeader() {
               href="/services" 
               className={'hover:text-amber-300 transition ' + (pathname.startsWith('/services') ? 'text-amber-300 font-bold' : '')}
             >
-              Individual Services
-            </Link>
-            <Link 
-              href="/community" 
-              className={'hover:text-amber-300 transition flex items-center gap-1.5 ' + (pathname.startsWith('/community') ? 'text-amber-300 font-bold' : '')}
-            >
-              <span>Community & Society</span>
-              <span className="text-[10px] font-black bg-amber-400 text-teal-950 px-1.5 py-0.2 rounded-full">AMC</span>
+              All 6 Services
             </Link>
             <Link 
               href="/#how-it-works" 
@@ -213,15 +206,7 @@ export default function WebHeader() {
             onClick={() => setMobileMenuOpen(false)}
             className="block px-3 py-2 rounded-lg text-sm font-semibold text-emerald-100 hover:bg-emerald-800/50"
           >
-            Individual Services
-          </Link>
-          <Link
-            href="/community"
-            onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center justify-between px-3 py-2 rounded-lg text-sm font-semibold text-amber-300 hover:bg-emerald-800/50"
-          >
-            <span>Community & Society Services</span>
-            <span className="text-[10px] font-black bg-amber-400 text-teal-950 px-2 py-0.5 rounded-full">AMC</span>
+            All 6 Services
           </Link>
           <Link
             href="/dashboard"
