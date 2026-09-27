@@ -211,10 +211,10 @@ export default function WebsiteCommunityServicesPage() {
                 <span>RERA & Co-op Society Approved</span>
               </span>
               <Link
-                href="/services"
+                href="/dashboard"
                 className="text-xs font-bold text-white/90 hover:text-white bg-white/10 hover:bg-white/20 border border-white/20 px-3 py-1 rounded-full transition"
               >
-                Switch to Individual Services →
+                Society RWA Console →
               </Link>
             </div>
           </div>
@@ -627,12 +627,17 @@ export default function WebsiteCommunityServicesPage() {
                 <Phone className="w-4 h-4" />
                 <span>Call Society Desk: 1800-123-SAHYOG</span>
               </a>
-              <Link
-                href="/services"
-                className="bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-xs sm:text-sm px-5 py-3 rounded-2xl transition"
+              <a
+                href="#societies"
+                onClick={(e) => {
+                  e.preventDefault();
+                  setShowSocietyMenu(true);
+                  window.scrollTo({ top: 120, behavior: 'smooth' });
+                }}
+                className="bg-white/10 hover:bg-white/20 border border-white/20 text-white font-bold text-xs sm:text-sm px-5 py-3 rounded-2xl transition cursor-pointer"
               >
-                Explore Individual Home Services
-              </Link>
+                View 42+ Registered Societies
+              </a>
             </div>
           </div>
         </section>

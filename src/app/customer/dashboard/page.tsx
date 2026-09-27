@@ -669,7 +669,7 @@ export default function CustomerDashboard() {
             <div>
               <span className="font-black text-lg tracking-tight text-white">SahYog</span>
               <span className="ml-2 text-[10px] font-bold bg-amber-400/20 text-amber-300 border border-amber-400/40 px-2 py-0.5 rounded">
-                COMMUNITY HUB
+                VERIFIED
               </span>
             </div>
           </div>
@@ -730,7 +730,7 @@ export default function CustomerDashboard() {
               <img src="/logo.png" alt="SahYog" className="w-9 h-9 object-contain drop-shadow-sm" />
               <div>
                 <h1 className="font-black text-base tracking-tight leading-none text-white">SahYog</h1>
-                <span className="text-[9px] text-emerald-200 font-medium tracking-wider uppercase">Community Hub</span>
+                <span className="text-[9px] text-emerald-200 font-medium tracking-wider uppercase">Verified Network</span>
               </div>
             </div>
 
@@ -1529,210 +1529,323 @@ export default function CustomerDashboard() {
           </div>
         )}
 
-        {/* Responsive 2-Column Split: Upcoming Bookings & Top Rated Professionals */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Column: Upcoming Service Appointment */}
-          <div className="lg:col-span-5 space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="font-black text-base text-slate-900 flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-teal-700" />
-                <span>Upcoming Appointment</span>
-              </h3>
-              <Link href="/customer/bookings" className="text-xs font-bold text-teal-700 hover:underline">
-                Manage
-              </Link>
-            </div>
-
-            <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs space-y-3">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-700 font-bold">
-                    <Wrench className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-sm text-slate-900">Deep Home Cleaning</h4>
-                    <p className="text-xs text-slate-500 flex items-center gap-1">
-                      <Clock className="w-3 h-3 text-slate-400" /> Tomorrow, 10:30 AM
-                    </p>
-                  </div>
-                </div>
-                {liveJobStatus === 'IN_PROGRESS' ? (
-                  <span className="text-[10px] font-black bg-amber-500 text-white px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-xs animate-pulse">
-                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
-                    In Progress
-                  </span>
-                ) : liveJobStatus === 'COMPLETED' ? (
-                  <span className="text-[10px] font-black bg-emerald-600 text-white px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-xs">
-                    <CheckCircle2 className="w-3 h-3 text-white" />
-                    Completed
-                  </span>
-                ) : (
-                  <span className="text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full">
-                    Confirmed
-                  </span>
-                )}
-              </div>
-
-              <div className="bg-slate-50 rounded-xl p-2.5 flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-amber-400 text-emerald-950 font-bold flex items-center justify-center text-[10px]">
-                    AK
-                  </div>
-                  <div>
-                    <p className="font-bold text-slate-800">{ratedWorker.name}</p>
-                    <p className="text-[10px] text-slate-400">
-                      {liveJobStatus === 'IN_PROGRESS' ? '⚡ Currently Working at Location' : liveJobStatus === 'COMPLETED' ? 'Job Completed • Rate Partner Below' : 'Verified Specialist • ★ 4.9'}
-                    </p>
-                  </div>
-                </div>
-                {liveJobStatus === 'COMPLETED' ? (
-                  <button
-                    type="button"
-                    onClick={() => setIsFeedbackOpen(true)}
-                    className="bg-amber-400 hover:bg-amber-300 text-emerald-950 font-black text-[11px] px-3 py-1.5 rounded-lg transition shadow-xs flex items-center gap-1 cursor-pointer"
-                  >
-                    <Star className="w-3.5 h-3.5 fill-emerald-950" />
-                    <span>Rate Partner</span>
-                  </button>
-                ) : (
-                  <Link
-                    href={`/customer/tracking/${activeBookingId || '1'}`}
-                    className="bg-teal-600 hover:bg-teal-700 text-white font-bold text-[11px] px-3 py-1.5 rounded-lg transition"
-                  >
-                    {liveJobStatus === 'IN_PROGRESS' ? 'View Live Job' : 'Track Partner'}
+        {/* Responsive Content Conditional on Service Mode */}
+        {serviceMode === 'INDIVIDUAL' ? (
+          <>
+            {/* Responsive 2-Column Split: Upcoming Bookings & Top Rated Professionals */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {/* Left Column: Upcoming Service Appointment */}
+              <div className="lg:col-span-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-black text-base text-slate-900 flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-teal-700" />
+                    <span>Upcoming Appointment</span>
+                  </h3>
+                  <Link href="/customer/bookings" className="text-xs font-bold text-teal-700 hover:underline">
+                    Manage
                   </Link>
-                )}
-              </div>
-            </div>
+                </div>
 
-            {/* Completed Job - Worker Feedback & Rating Card */}
-            <div className="bg-gradient-to-br from-amber-500/10 via-amber-100/30 to-teal-50/50 rounded-2xl p-4 border border-amber-300/80 shadow-xs space-y-3">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-black shadow-sm">
-                    <Star className="w-5 h-5 fill-white" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] font-black uppercase tracking-wider bg-amber-500 text-white px-2 py-0.5 rounded-full">
-                        {hasRated ? 'Review Submitted' : 'Rate Your Partner'}
-                      </span>
-                      {hasRated && (
-                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3" /> ★ {selectedRating}.0
-                        </span>
-                      )}
+                <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-teal-50 border border-teal-200 flex items-center justify-center text-teal-700 font-bold">
+                        <Wrench className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-sm text-slate-900">Deep Home Cleaning</h4>
+                        <p className="text-xs text-slate-500 flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-slate-400" /> Tomorrow, 10:30 AM
+                        </p>
+                      </div>
                     </div>
-                    <h4 className="font-bold text-sm text-slate-900 mt-1">{ratedWorker.service}</h4>
-                    <p className="text-[11px] text-slate-500">{ratedWorker.completedDate}</p>
+                    {liveJobStatus === 'IN_PROGRESS' ? (
+                      <span className="text-[10px] font-black bg-amber-500 text-white px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-xs animate-pulse">
+                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                        In Progress
+                      </span>
+                    ) : liveJobStatus === 'COMPLETED' ? (
+                      <span className="text-[10px] font-black bg-emerald-600 text-white px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-xs">
+                        <CheckCircle2 className="w-3 h-3 text-white" />
+                        Completed
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-black bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full">
+                        Confirmed
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="bg-slate-50 rounded-xl p-2.5 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-amber-400 text-emerald-950 font-bold flex items-center justify-center text-[10px]">
+                        AK
+                      </div>
+                      <div>
+                        <p className="font-bold text-slate-800">{ratedWorker.name}</p>
+                        <p className="text-[10px] text-slate-400">
+                          {liveJobStatus === 'IN_PROGRESS' ? '⚡ Currently Working at Location' : liveJobStatus === 'COMPLETED' ? 'Job Completed • Rate Partner Below' : 'Verified Specialist • ★ 4.9'}
+                        </p>
+                      </div>
+                    </div>
+                    {liveJobStatus === 'COMPLETED' ? (
+                      <button
+                        type="button"
+                        onClick={() => setIsFeedbackOpen(true)}
+                        className="bg-amber-400 hover:bg-amber-300 text-emerald-950 font-black text-[11px] px-3 py-1.5 rounded-lg transition shadow-xs flex items-center gap-1 cursor-pointer"
+                      >
+                        <Star className="w-3.5 h-3.5 fill-emerald-950" />
+                        <span>Rate Partner</span>
+                      </button>
+                    ) : (
+                      <Link
+                        href={`/customer/tracking/${activeBookingId || '1'}`}
+                        className="bg-teal-600 hover:bg-teal-700 text-white font-bold text-[11px] px-3 py-1.5 rounded-lg transition"
+                      >
+                        {liveJobStatus === 'IN_PROGRESS' ? 'View Live Job' : 'Track Partner'}
+                      </Link>
+                    )}
+                  </div>
+                </div>
+
+                {/* Completed Job - Worker Feedback & Rating Card */}
+                <div className="bg-gradient-to-br from-amber-500/10 via-amber-100/30 to-teal-50/50 rounded-2xl p-4 border border-amber-300/80 shadow-xs space-y-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-black shadow-sm">
+                        <Star className="w-5 h-5 fill-white" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] font-black uppercase tracking-wider bg-amber-500 text-white px-2 py-0.5 rounded-full">
+                            {hasRated ? 'Review Submitted' : 'Rate Your Partner'}
+                          </span>
+                          {hasRated && (
+                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                              <CheckCircle2 className="w-3 h-3" /> ★ {selectedRating}.0
+                            </span>
+                          )}
+                        </div>
+                        <h4 className="font-bold text-sm text-slate-900 mt-1">{ratedWorker.service}</h4>
+                        <p className="text-[11px] text-slate-500">{ratedWorker.completedDate}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white rounded-xl p-3 border border-amber-200/70 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-full bg-teal-800 text-amber-300 font-bold flex items-center justify-center text-xs">
+                        AK
+                      </div>
+                      <div>
+                        <p className="font-bold text-xs text-slate-900">{ratedWorker.name}</p>
+                        <p className="text-[10px] text-teal-700 font-medium">
+                          {hasRated ? 'Thank you for your rating!' : 'How was your experience?'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsFeedbackOpen(true)}
+                      className={`font-black text-xs px-3.5 py-2 rounded-xl transition shadow-sm flex items-center gap-1.5 cursor-pointer ${
+                        hasRated
+                          ? 'bg-teal-50 text-teal-800 hover:bg-teal-100 border border-teal-200'
+                          : 'bg-amber-500 hover:bg-amber-600 text-white'
+                      }`}
+                    >
+                      <Star className={`w-3.5 h-3.5 ${hasRated ? 'text-amber-500 fill-amber-500' : 'fill-white'}`} />
+                      <span>{hasRated ? 'Edit Rating' : 'Rate Worker'}</span>
+                    </button>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white rounded-xl p-3 border border-amber-200/70 flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full bg-teal-800 text-amber-300 font-bold flex items-center justify-center text-xs">
-                    AK
-                  </div>
-                  <div>
-                    <p className="font-bold text-xs text-slate-900">{ratedWorker.name}</p>
-                    <p className="text-[10px] text-teal-700 font-medium">
-                      {hasRated ? 'Thank you for your rating!' : 'How was your experience?'}
-                    </p>
-                  </div>
+              {/* Right Column: Top Rated Nearby Workers */}
+              <div className="lg:col-span-7 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-black text-base text-slate-900 flex items-center gap-2">
+                    <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+                    <span>Highly Rated Service Professionals</span>
+                  </h3>
+                  <Link href="/customer/services" className="text-xs font-bold text-teal-700 hover:underline">
+                    Explore All 100 →
+                  </Link>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => setIsFeedbackOpen(true)}
-                  className={`font-black text-xs px-3.5 py-2 rounded-xl transition shadow-sm flex items-center gap-1.5 cursor-pointer ${
-                    hasRated
-                      ? 'bg-teal-50 text-teal-800 hover:bg-teal-100 border border-teal-200'
-                      : 'bg-amber-500 hover:bg-amber-600 text-white'
-                  }`}
-                >
-                  <Star className={`w-3.5 h-3.5 ${hasRated ? 'text-amber-500 fill-amber-500' : 'fill-white'}`} />
-                  <span>{hasRated ? 'Edit Rating' : 'Rate Worker'}</span>
-                </button>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {featuredWorkers.map((w) => (
+                    <div
+                      key={w.id}
+                      className="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-xs hover:border-teal-500 transition flex flex-col justify-between"
+                    >
+                      <div>
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-100 to-emerald-100 flex items-center justify-center font-bold text-teal-800 text-xs">
+                              {(w.name || 'Worker').split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+                            </div>
+                            <div>
+                              <h4 className="font-bold text-xs text-slate-900">{w.name}</h4>
+                              <span className="text-[10px] text-teal-700 font-semibold">{w.category}</span>
+                            </div>
+                          </div>
+                          <span className="text-[10px] bg-amber-50 text-amber-800 border border-amber-200 px-1.5 py-0.5 rounded font-bold">
+                            {w.badge || 'Verified'}
+                          </span>
+                        </div>
+
+                        <p className="text-[11px] text-slate-500 mt-2 line-clamp-1">{w.title}</p>
+                      </div>
+
+                      <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
+                        <div>
+                          <span className="text-sm font-black text-teal-800">₹{w.rate}</span>
+                          <span className="text-[10px] text-slate-400"> / hr</span>
+                        </div>
+                        <Link
+                          href={`/customer/worker/${w.id}`}
+                          className="text-xs font-bold text-teal-700 hover:text-white bg-teal-50 hover:bg-teal-700 px-3 py-1.5 rounded-lg transition border border-teal-200/60"
+                        >
+                          View & Book
+                        </Link>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Right Column: Top Rated Nearby Workers */}
-          <div className="lg:col-span-7 space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="font-black text-base text-slate-900 flex items-center gap-2">
-                <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-                <span>Highly Rated Service Professionals</span>
+            {/* Promo Festive Offer Card */}
+            <div className="bg-gradient-to-r from-amber-500 via-amber-600 to-orange-600 text-white rounded-3xl p-6 shadow-lg relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -mr-10 -mt-10 pointer-events-none" />
+              <span className="bg-emerald-950/40 text-amber-200 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full">
+                Special Launch Offer
+              </span>
+              <h3 className="font-black text-xl sm:text-2xl mt-1.5 leading-tight text-white">
+                Get Flat 20% OFF on Any Service Booking!
               </h3>
-              <Link href="/customer/services" className="text-xs font-bold text-teal-700 hover:underline">
-                Explore All 100 →
+              <p className="text-xs sm:text-sm text-amber-100 mt-1">
+                Choose from 1 hr, 4 hr half-day, or 8 hr full-day packages. Use code <b className="text-white bg-black/20 px-1.5 py-0.5 rounded font-mono">SAHYOG20</b>.
+              </p>
+              <Link
+                href="/customer/services"
+                className="mt-4 inline-flex items-center gap-1.5 bg-white text-emerald-950 font-black text-xs px-5 py-2.5 rounded-xl shadow-sm hover:bg-amber-50 transition"
+              >
+                <span>Book a Professional Now</span>
+                <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
+          </>
+        ) : (
+          <div className="space-y-6">
+            {/* Society Maintenance History & Compliance Dossier */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              <div className="lg:col-span-6 bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-xs space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="w-5 h-5 text-teal-700" />
+                    <h3 className="font-black text-sm sm:text-base text-slate-900">
+                      Society Safety & Compliance Logs
+                    </h3>
+                  </div>
+                  <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full">
+                    Active & Audited
+                  </span>
+                </div>
+                <div className="space-y-2.5 text-xs">
+                  <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center justify-between">
+                    <div>
+                      <div className="font-bold text-slate-900">Overhead Tank UV Sterilization</div>
+                      <div className="text-[11px] text-slate-500">Last Cleaned: 18 Sep 2026 • Towers A, B, C</div>
+                    </div>
+                    <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-200">
+                      ✓ Certificate Issued
+                    </span>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center justify-between">
+                    <div>
+                      <div className="font-bold text-slate-900">Stormwater Sump Pump Desilting</div>
+                      <div className="text-[11px] text-slate-500">Monsoon Pre-clearance Completed</div>
+                    </div>
+                    <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-200">
+                      ✓ Verified
+                    </span>
+                  </div>
+                  <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center justify-between">
+                    <div>
+                      <div className="font-bold text-slate-900">Substation & Elevator Earthing AMC</div>
+                      <div className="text-[11px] text-slate-500">Next Scheduled Inspection: 15 Oct 2026</div>
+                    </div>
+                    <span className="text-[10px] font-black text-amber-700 bg-amber-50 px-2 py-1 rounded border border-amber-200">
+                      ⏳ Scheduled
+                    </span>
+                  </div>
+                </div>
+              </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {featuredWorkers.map((w) => (
-                <div
-                  key={w.id}
-                  className="bg-white rounded-2xl p-3.5 border border-slate-200 shadow-xs hover:border-teal-500 transition flex flex-col justify-between"
-                >
-                  <div>
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-100 to-emerald-100 flex items-center justify-center font-bold text-teal-800 text-xs">
-                          {(w.name || 'Worker').split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+              {/* Society Squad Leads On Duty */}
+              <div className="lg:col-span-6 bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-xs space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-5 h-5 text-amber-600" />
+                    <h3 className="font-black text-sm sm:text-base text-slate-900">
+                      Assigned Squad Supervisors
+                    </h3>
+                  </div>
+                  <Link href="/customer/community" className="text-xs font-bold text-teal-700 hover:underline">
+                    View Hub →
+                  </Link>
+                </div>
+                <div className="space-y-2.5">
+                  {[
+                    { name: 'Ravi Kumar', trade: 'Water Tank & Sanitation Squad Lead', exp: '8 yrs exp', squad: '4 Workers Squad' },
+                    { name: 'Vikram Solanki', trade: 'Substation & Electrical Specialist Lead', exp: '11 yrs exp', squad: '3 Specialists Squad' },
+                    { name: 'Hiren Panchal', trade: 'Stormwater & High-Pressure Jetting Lead', exp: '9 yrs exp', squad: '4 Workers Squad' },
+                  ].map((lead, idx) => (
+                    <div key={idx} className="p-3 bg-slate-50 rounded-2xl border border-slate-200/80 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-teal-800 text-amber-300 font-black text-xs flex items-center justify-center shadow-xs">
+                          {lead.name.split(' ').map(n => n[0]).join('')}
                         </div>
                         <div>
-                          <h4 className="font-bold text-xs text-slate-900">{w.name}</h4>
-                          <span className="text-[10px] text-teal-700 font-semibold">{w.category}</span>
+                          <div className="text-xs font-bold text-slate-900">{lead.name}</div>
+                          <div className="text-[11px] text-slate-500">{lead.trade}</div>
                         </div>
                       </div>
-                      <span className="text-[10px] bg-amber-50 text-amber-800 border border-amber-200 px-1.5 py-0.5 rounded font-bold">
-                        {w.badge || 'Verified'}
+                      <span className="text-[10px] font-black bg-amber-400 text-teal-950 px-2 py-0.5 rounded-full">
+                        {lead.squad}
                       </span>
                     </div>
-
-                    <p className="text-[11px] text-slate-500 mt-2 line-clamp-1">{w.title}</p>
-                  </div>
-
-                  <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
-                    <div>
-                      <span className="text-sm font-black text-teal-800">₹{w.rate}</span>
-                      <span className="text-[10px] text-slate-400"> / hr</span>
-                    </div>
-                    <Link
-                      href={`/customer/worker/${w.id}`}
-                      className="text-xs font-bold text-teal-700 hover:text-white bg-teal-50 hover:bg-teal-700 px-3 py-1.5 rounded-lg transition border border-teal-200/60"
-                    >
-                      View & Book
-                    </Link>
-                  </div>
+                  ))}
                 </div>
-              ))}
+              </div>
+            </div>
+
+            {/* Society AMC Helpdesk Card */}
+            <div className="bg-gradient-to-r from-teal-900 via-emerald-900 to-teal-950 text-white rounded-3xl p-6 sm:p-7 shadow-lg relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <span className="text-[10px] font-black uppercase tracking-wider bg-amber-400 text-teal-950 px-2.5 py-0.5 rounded-full">
+                  RWA & Society Secretary Desk
+                </span>
+                <h3 className="text-lg sm:text-xl font-black text-white mt-1">
+                  Need Custom Society AMC for {selectedSociety.name}?
+                </h3>
+                <p className="text-xs text-emerald-100/90 max-w-xl">
+                  Get dedicated quarterly water tank disinfection, lift power backup, and monsoon drain cleaning contracts billed to your Society Maintenance Account with GST invoice.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <Link
+                  href="/customer/community"
+                  className="bg-amber-400 hover:bg-amber-300 text-teal-950 font-black text-xs px-4 py-2.5 rounded-xl shadow transition whitespace-nowrap"
+                >
+                  Deploy Squad Now →
+                </Link>
+              </div>
             </div>
           </div>
-        </div>
-
-        {/* Promo Festive Offer Card */}
-        <div className="bg-gradient-to-r from-amber-500 via-amber-600 to-orange-600 text-white rounded-3xl p-6 shadow-lg relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -mr-10 -mt-10 pointer-events-none" />
-          <span className="bg-emerald-950/40 text-amber-200 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full">
-            Special Launch Offer
-          </span>
-          <h3 className="font-black text-xl sm:text-2xl mt-1.5 leading-tight text-white">
-            Get Flat 20% OFF on Any Service Booking!
-          </h3>
-          <p className="text-xs sm:text-sm text-amber-100 mt-1">
-            Choose from 1 hr, 4 hr half-day, or 8 hr full-day packages. Use code <b className="text-white bg-black/20 px-1.5 py-0.5 rounded font-mono">SAHYOG20</b>.
-          </p>
-          <Link
-            href="/customer/services"
-            className="mt-4 inline-flex items-center gap-1.5 bg-white text-emerald-950 font-black text-xs px-5 py-2.5 rounded-xl shadow-sm hover:bg-amber-50 transition"
-          >
-            <span>Book a Professional Now</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
+        )}
       </div>
 
       {/* Real-time sync floating notification */}

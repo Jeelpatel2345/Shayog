@@ -78,17 +78,17 @@ export default function WebHeader() {
               <div className="flex items-center gap-2">
                 <span className="font-black text-2xl tracking-tight text-white">SahYog</span>
                 <span className="text-[10px] font-bold bg-amber-400/20 text-amber-300 border border-amber-400/40 px-2 py-0.5 rounded uppercase tracking-wider">
-                  Community Hub
+                  Verified
                 </span>
               </div>
-              <p className="text-xs text-emerald-200/80 font-medium hidden sm:block">
-                Verified Home Services & Professional Care
+              <p className="text-xs text-emerald-200/80 font-medium hidden xl:block">
+                Home Services & Verified Professional Network
               </p>
             </div>
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-8 font-semibold text-sm text-emerald-100">
+          <nav className="hidden lg:flex items-center gap-5 xl:gap-6 font-semibold text-sm text-emerald-100">
             <Link 
               href="/" 
               className={'hover:text-amber-300 transition ' + (pathname === '/' ? 'text-amber-300 font-bold' : '')}
@@ -99,7 +99,7 @@ export default function WebHeader() {
               href="/services" 
               className={'hover:text-amber-300 transition ' + (pathname.startsWith('/services') ? 'text-amber-300 font-bold' : '')}
             >
-              All 6 Services
+              Services
             </Link>
             <Link 
               href="/#how-it-works" 
@@ -129,17 +129,17 @@ export default function WebHeader() {
           </nav>
 
           {/* Right Action Buttons */}
-          <div className="hidden md:flex items-center gap-4">
+          <div className="hidden lg:flex items-center gap-3">
             {displayName ? (
               <div className="flex items-center gap-3">
                 <Link
                   href="/profile"
-                  className="flex items-center gap-2.5 bg-emerald-950/60 border border-emerald-700/60 px-3.5 py-1.5 rounded-full hover:bg-emerald-900 transition"
+                  className="flex items-center gap-2 bg-emerald-950/60 border border-emerald-700/60 px-3 py-1.5 rounded-full hover:bg-emerald-900 transition"
                 >
                   <div className="w-7 h-7 rounded-full bg-amber-400 text-emerald-950 font-black text-xs flex items-center justify-center shadow-xs">
                     {initials}
                   </div>
-                  <span className="text-xs font-bold text-white max-w-[120px] truncate">
+                  <span className="text-xs font-bold text-white max-w-[110px] truncate">
                     {displayName}
                   </span>
                 </Link>
@@ -155,24 +155,24 @@ export default function WebHeader() {
             ) : (
               <Link
                 href="/login"
-                className="text-xs font-bold text-emerald-200 hover:text-white px-3.5 py-2 rounded-xl hover:bg-white/10 transition flex items-center gap-1.5"
+                className="text-xs font-bold text-emerald-200 hover:text-white px-3 py-2 rounded-xl hover:bg-white/10 transition flex items-center gap-1.5"
               >
                 <User className="w-4 h-4" />
-                <span>Sign In / Register</span>
+                <span>Sign In</span>
               </Link>
             )}
 
             <Link
               href="/services"
-              className="bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-emerald-950 font-black text-xs px-5 py-2.5 rounded-xl shadow-md transition flex items-center gap-2 hover:scale-[1.02]"
+              className="bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-emerald-950 font-black text-xs px-4 py-2.5 rounded-xl shadow-md transition flex items-center gap-1.5 hover:scale-[1.02]"
             >
               <Sparkles className="w-4 h-4" />
-              <span>Book a Service</span>
+              <span>Book Service</span>
             </Link>
           </div>
 
           {/* Mobile Menu Button */}
-          <div className="md:hidden flex items-center gap-2">
+          <div className="lg:hidden flex items-center gap-2">
             {displayName && (
               <Link
                 href="/profile"
@@ -193,7 +193,7 @@ export default function WebHeader() {
 
       {/* Mobile Navigation Dropdown */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-[#042f2e] border-t border-emerald-800/80 px-4 pt-3 pb-5 space-y-2">
+        <div className="lg:hidden bg-[#042f2e] border-t border-emerald-800/80 px-4 pt-3 pb-5 space-y-2">
           <Link
             href="/"
             onClick={() => setMobileMenuOpen(false)}
@@ -206,7 +206,7 @@ export default function WebHeader() {
             onClick={() => setMobileMenuOpen(false)}
             className="block px-3 py-2 rounded-lg text-sm font-semibold text-emerald-100 hover:bg-emerald-800/50"
           >
-            All 6 Services
+            Services
           </Link>
           <Link
             href="/dashboard"

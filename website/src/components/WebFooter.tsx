@@ -33,15 +33,15 @@ export default function WebFooter() {
 
           <div>
             <h3 className="text-white font-bold text-sm uppercase tracking-wider mb-4">
-              All 6 Services
+              Services &amp; Squads
             </h3>
             <ul className="space-y-2.5 text-xs font-medium">
-              <li><Link href="/services?category=Cleaning" className="hover:text-amber-300 transition">Home Cleaning (18)</Link></li>
-              <li><Link href="/services?category=Plumbing" className="hover:text-amber-300 transition">Plumbing & Pipes (17)</Link></li>
-              <li><Link href="/services?category=Electrician" className="hover:text-amber-300 transition">Electrician & Wiring (17)</Link></li>
-              <li><Link href="/services?category=Appliance Repair" className="hover:text-amber-300 transition">Appliance Repair (16)</Link></li>
-              <li><Link href="/services?category=Carpentry" className="hover:text-amber-300 transition">Carpentry & Woodwork (16)</Link></li>
-              <li><Link href="/services?category=Painting" className="hover:text-amber-300 transition">Painting & Waterproofing (16)</Link></li>
+              <li><Link href="/services?category=Cleaning" className="hover:text-amber-300 transition">Cleaning &amp; Housekeeping</Link></li>
+              <li><Link href="/services?category=Plumbing" className="hover:text-amber-300 transition">Plumbing &amp; Sanitation</Link></li>
+              <li><Link href="/services?category=Electrician" className="hover:text-amber-300 transition">Electrical &amp; Wiring</Link></li>
+              <li><Link href="/services?category=Appliance Repair" className="hover:text-amber-300 transition">Appliance Maintenance</Link></li>
+              <li><Link href="/services?category=Carpentry" className="hover:text-amber-300 transition">Carpentry &amp; Woodwork</Link></li>
+              <li><Link href="/services?category=Painting" className="hover:text-amber-300 transition">Painting &amp; Finishing</Link></li>
             </ul>
           </div>
 
@@ -52,6 +52,7 @@ export default function WebFooter() {
             <ul className="space-y-2.5 text-xs font-medium">
               <li><Link href="/" className="hover:text-amber-300 transition">Home</Link></li>
               <li><Link href="/services" className="hover:text-amber-300 transition">Browse 100 Workers</Link></li>
+              <li><Link href="/community" className="hover:text-amber-300 transition">Society &amp; AMC Hub</Link></li>
               <li><Link href="/dashboard" className="hover:text-amber-300 transition">Customer Dashboard</Link></li>
               <li><Link href="/bookings" className="hover:text-amber-300 transition">My Service Bookings</Link></li>
               <li><Link href="/login" className="hover:text-amber-300 transition">Partner / Worker Login</Link></li>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   Search, MapPin, Sparkles, ShieldCheck, Star, Clock, 
@@ -24,10 +24,29 @@ export default function HomePage() {
   const [selectedCity, setSelectedCity] = useState('All Cities');
   const [scope, setScope] = useState<'INDIVIDUAL' | 'COMMUNITY'>('INDIVIDUAL');
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedScope = localStorage.getItem('sahyog_selected_scope') as 'INDIVIDUAL' | 'COMMUNITY' | null;
+      if (savedScope === 'COMMUNITY' || savedScope === 'INDIVIDUAL') {
+        setScope(savedScope);
+      }
+    }
+  }, []);
+
+  const handleScopeToggle = (newScope: 'INDIVIDUAL' | 'COMMUNITY') => {
+    setScope(newScope);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sahyog_selected_scope', newScope);
+      try {
+        window.dispatchEvent(new Event('storage'));
+      } catch {}
+    }
+  };
+
   const featuredWorkers = allWorkers.slice(0, 6);
 
   const getInitials = (name: string) => {
-    const parts = name.trim().split(/s+/).filter(Boolean);
+    const parts = name.trim().split(/\s+/).filter(Boolean);
     if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   };
@@ -72,10 +91,10 @@ export default function HomePage() {
               <div className="inline-flex bg-white/15 p-1 rounded-2xl border border-white/20 backdrop-blur-md">
                 <button
                   type="button"
-                  onClick={() => setScope('INDIVIDUAL')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+                  onClick={() => handleScopeToggle('INDIVIDUAL')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
                     scope === 'INDIVIDUAL'
-                      ? 'bg-white text-teal-900 shadow-md'
+                      ? 'bg-white text-teal-900 shadow-md font-black'
                       : 'text-white/80 hover:text-white'
                   }`}
                 >
@@ -83,10 +102,10 @@ export default function HomePage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setScope('COMMUNITY')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
+                  onClick={() => handleScopeToggle('COMMUNITY')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
                     scope === 'COMMUNITY'
-                      ? 'bg-amber-400 text-teal-950 shadow-md'
+                      ? 'bg-amber-400 text-teal-950 shadow-md font-black'
                       : 'text-white/80 hover:text-white'
                   }`}
                 >
