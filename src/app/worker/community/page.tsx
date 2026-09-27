@@ -135,6 +135,7 @@ function WorkerCommunityDashboardContent() {
   const [activeBooking, setActiveBooking] = useState<CommunityBooking>(defaultActiveCommunityBooking);
   const [allSocietyBookings, setAllSocietyBookings] = useState<CommunityBooking[]>(initialSocietyBookings);
   const [jobStatus, setJobStatus] = useState<'CREW_EN_ROUTE' | 'IN_PROGRESS' | 'COMPLETED'>('CREW_EN_ROUTE');
+  const [isSquadAccepted, setIsSquadAccepted] = useState<boolean>(true);
   
   // Tabs: ACTIVE_JOB, BOOKINGS, CHAT, AI
   const initialTab = (searchParams.get('tab')?.toUpperCase() as any) || 'ACTIVE_JOB';
@@ -357,6 +358,40 @@ function WorkerCommunityDashboardContent() {
         timestamp: Date.now()
       }));
     }
+  };
+
+  const handleAcceptSquadJob = async () => {
+    setIsSquadAccepted(true);
+    setJobStatus('CREW_EN_ROUTE');
+    try {
+      await fetch(`/api/community/bookings/${activeBooking.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'CREW_EN_ROUTE' })
+      });
+    } catch {}
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sahyog_squad_accepted_' + activeBooking.id, 'true');
+      localStorage.setItem('sahyog-realtime-event', JSON.stringify({
+        type: 'COMMUNITY_JOB_ACCEPTED',
+        bookingId: activeBooking.id,
+        timestamp: Date.now()
+      }));
+    }
+
+    try {
+      const channel = new BroadcastChannel('sahyog-realtime-sync');
+      channel.postMessage({
+        type: 'COMMUNITY_JOB_ACCEPTED',
+        bookingId: activeBooking.id,
+        timestamp: Date.now()
+      });
+      channel.close();
+    } catch {}
+
+    setToastNotice('⚡ Society Squad Accepted! Heading to Society Gate.');
+    setTimeout(() => setToastNotice(''), 4000);
   };
 
   const handleSendSecretaryMessage = (e?: React.FormEvent, predefinedText?: string) => {
@@ -663,6 +698,15 @@ function WorkerCommunityDashboardContent() {
                       <span>Verify & Authorize Squad KYC (Instant Approval)</span>
                     </button>
                   </div>
+                ) : !isSquadAccepted && jobStatus !== 'IN_PROGRESS' && jobStatus !== 'COMPLETED' ? (
+                  <button
+                    type="button"
+                    onClick={handleAcceptSquadJob}
+                    className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-black py-3.5 rounded-2xl shadow-lg transition flex items-center justify-center gap-2 text-sm cursor-pointer"
+                  >
+                    <CheckCircle2 className="w-5 h-5" />
+                    <span>Accept Society Squad Dispatch (सोसायटी स्क्वाड स्वीकार करें)</span>
+                  </button>
                 ) : jobStatus === 'CREW_EN_ROUTE' ? (
                   <button
                     type="button"

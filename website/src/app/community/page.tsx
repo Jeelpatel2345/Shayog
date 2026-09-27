@@ -99,6 +99,15 @@ export default function WebsiteCommunityServicesPage() {
       const phone = localStorage.getItem('sahyog-user-phone') || '';
       setUserName(name);
       setUserPhone(phone);
+
+      const params = new URLSearchParams(window.location.search);
+      const socParam = params.get('societyId');
+      if (socParam) {
+        const found = registeredSocieties.find(s => s.id === socParam || s.id.toLowerCase() === socParam.toLowerCase());
+        if (found) {
+          setSelectedSociety(found);
+        }
+      }
     }
   }, []);
 
@@ -124,43 +133,122 @@ export default function WebsiteCommunityServicesPage() {
     setCheckoutStep('PAYMENT');
   };
 
-  const handleConfirmCommunityPayment = () => {
+  const handleConfirmCommunityPayment = async () => {
     setIsSubmittingBooking(true);
     setCheckoutStep('PROCESSING');
 
-    setTimeout(() => {
-      setIsSubmittingBooking(false);
-      const newOtp = Math.floor(1000 + Math.random() * 9000).toString();
-      setGeneratedGateOtp(newOtp);
+    const newOtp = Math.floor(1000 + Math.random() * 9000).toString();
+    setGeneratedGateOtp(newOtp);
+    const bkId = 'SY-COM-' + Math.floor(100000 + Math.random() * 900000);
 
-      if (bookingModalPkg) {
-        const newBooking: CommunityBooking = {
-          id: 'SY-COM-' + Math.floor(100000 + Math.random() * 900000),
-          societyId: selectedSociety.id,
-          societyName: selectedSociety.name,
-          societyAddress: selectedSociety.fullAddress,
-          packageId: bookingModalPkg.id,
-          packageTitle: bookingModalPkg.title,
-          crewSize: bookingModalPkg.crewSize,
-          leadWorkerName: bookingModalPkg.leadWorkerName,
-          crewRoster: bookingModalPkg.crewRoster,
-          scheduledDate: selectedDate,
-          scheduledTime: selectedTime,
-          totalAmount: bookingModalPkg.discountedRateINR,
-          workerOtp: newOtp,
-          status: 'SCHEDULED',
-          orderedBy: userName || selectedSociety.authorizedRepresentative.name,
-          ordererPhone: userPhone || selectedSociety.authorizedRepresentative.mobile,
-          poolSharePerWorker: Math.round(bookingModalPkg.discountedRateINR / bookingModalPkg.crewSize),
-          createdAt: new Date().toISOString()
-        };
+    if (bookingModalPkg) {
+      const newBooking: CommunityBooking = {
+        id: bkId,
+        societyId: selectedSociety.id,
+        societyName: selectedSociety.name,
+        societyAddress: selectedSociety.fullAddress,
+        packageId: bookingModalPkg.id,
+        packageTitle: bookingModalPkg.title,
+        crewSize: bookingModalPkg.crewSize,
+        leadWorkerName: bookingModalPkg.leadWorkerName,
+        crewRoster: bookingModalPkg.crewRoster,
+        scheduledDate: selectedDate,
+        scheduledTime: selectedTime,
+        totalAmount: bookingModalPkg.discountedRateINR,
+        workerOtp: newOtp,
+        status: 'SCHEDULED',
+        orderedBy: userName || selectedSociety.authorizedRepresentative.name,
+        ordererPhone: userPhone || selectedSociety.authorizedRepresentative.mobile,
+        poolSharePerWorker: Math.round(bookingModalPkg.discountedRateINR / bookingModalPkg.crewSize),
+        createdAt: new Date().toISOString()
+      };
 
-        setActiveBooking(newBooking);
+      // 1. Post to Neon PostgreSQL DB via /api/community/bookings
+      try {
+        await fetch('/api/community/bookings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newBooking)
+        });
+      } catch (err) {
+        console.warn('API community bookings post notice:', err);
       }
 
+      // 2. Also register into /api/bookings so phone worker dashboard sees it instantly
+      try {
+        await fetch('/api/bookings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            bookingCode: bkId,
+            serviceTitle: `[Community: ${selectedSociety.name}] ${bookingModalPkg.title} (${bookingModalPkg.crewSize} Workers)`,
+            workerName: bookingModalPkg.leadWorkerName,
+            customerName: userName || selectedSociety.authorizedRepresentative.name,
+            customerPhone: userPhone || selectedSociety.authorizedRepresentative.mobile,
+            serviceLocation: `${selectedSociety.name}, ${selectedSociety.fullAddress}`,
+            city: selectedSociety.city,
+            totalAmount: bookingModalPkg.discountedRateINR,
+            workerOtp: newOtp,
+            status: 'PENDING',
+            paymentMethod: selectedPaymentMethod,
+            scheduledDate: selectedDate,
+            scheduledTime: selectedTime
+          })
+        });
+      } catch (err) {
+        console.warn('API booking sync notice:', err);
+      }
+
+      // 3. Store to localStorage
+      if (typeof window !== 'undefined') {
+        try {
+          const raw = localStorage.getItem('sahyog-user-bookings');
+          const existing = raw ? JSON.parse(raw) : [];
+          existing.unshift({
+            id: bkId,
+            bookingCode: bkId,
+            serviceTitle: bookingModalPkg.title,
+            workerName: bookingModalPkg.leadWorkerName + ' (Squad Lead)',
+            status: 'CONFIRMED',
+            scheduledDate: selectedDate,
+            scheduledTime: selectedTime,
+            serviceLocation: selectedSociety.name,
+            totalAmount: bookingModalPkg.discountedRateINR,
+            workerOtp: newOtp,
+            crewSize: bookingModalPkg.crewSize,
+            isCommunity: true
+          });
+          localStorage.setItem('sahyog-user-bookings', JSON.stringify(existing));
+          localStorage.setItem('sahyog_active_community_booking_id', bkId);
+          localStorage.setItem('sahyog-active-booking-id', bkId);
+
+          // 4. Broadcast live notification to Worker phone console
+          const eventPayload = {
+            type: 'NEW_COMMUNITY_BOOKING',
+            bookingId: bkId,
+            societyName: selectedSociety.name,
+            packageTitle: bookingModalPkg.title,
+            workerShare: Math.round(bookingModalPkg.discountedRateINR / bookingModalPkg.crewSize),
+            workerOtp: newOtp,
+            leadWorker: bookingModalPkg.leadWorkerName,
+            timestamp: Date.now()
+          };
+          localStorage.setItem('sahyog-realtime-event', JSON.stringify(eventPayload));
+
+          const channel = new BroadcastChannel('sahyog-realtime-sync');
+          channel.postMessage(eventPayload);
+          channel.close();
+        } catch {}
+      }
+
+      setActiveBooking(newBooking);
+    }
+
+    setTimeout(() => {
+      setIsSubmittingBooking(false);
       setCheckoutStep('CONFIRMED');
       setBookingSuccessNotice('🎉 Community Service Crew Dispatched & Gate Entry Pass Generated!');
-    }, 1500);
+    }, 1200);
   };
 
   const handleCloseBookingModal = () => {

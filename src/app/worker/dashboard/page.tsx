@@ -7,7 +7,7 @@ import {
   Calendar, Home, MessageSquare, User, Navigation, Phone, 
   CheckCircle2, X, Upload, ShieldCheck, Check, ExternalLink,
   ChevronDown, HelpCircle, ArrowRight, KeyRound, AlertCircle,
-  Star, ThumbsUp, Sparkles, Users, Building2, LogOut, Lock
+  Star, ThumbsUp, Sparkles, Users, Building2, LogOut, Lock, Loader2
 } from 'lucide-react';
 import RealTrackingMap from '@/components/RealTrackingMap';
 import BottomNav from '@/components/BottomNav';
@@ -20,7 +20,7 @@ export default function WorkerDashboard() {
   const [showDirectionsModal, setShowDirectionsModal] = useState(false);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
-  const [activeJobStatus, setActiveJobStatus] = useState<'IN PROGRESS' | 'ON THE WAY' | 'COMPLETED'>('ON THE WAY');
+  const [activeJobStatus, setActiveJobStatus] = useState<'NEW_REQUEST' | 'IN PROGRESS' | 'ON THE WAY' | 'COMPLETED' | 'OFFLINE'>('ON THE WAY');
   const [uploadedAadhar, setUploadedAadhar] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationSubmitted, setVerificationSubmitted] = useState(false);
@@ -45,6 +45,7 @@ export default function WorkerDashboard() {
   const [otpError, setOtpError] = useState('');
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [toastNotice, setToastNotice] = useState('');
+  const [isAccepting, setIsAccepting] = useState(false);
 
   // Live Reviews & Customer Feedback strictly for this Worker
   const [workerReviews, setWorkerReviews] = useState<any[]>([]);
@@ -115,19 +116,32 @@ export default function WorkerDashboard() {
               }
 
               if (active) {
-                const isVerified = active.status === 'IN_PROGRESS' || !!active.otpVerifiedAt;
-                setActiveBooking({
-                  id: active.id,
-                  bookingCode: active.bookingCode,
-                  customerName: active.customer?.fullName || active.customerName || 'Verified Customer',
-                  customerPhone: active.customer?.phone || active.customerPhone || '+919876543210',
-                  service: active.serviceTitle || 'Home Service Specialist',
-                  address: active.serviceLocation || 'Ahmedabad, Gujarat',
-                  amount: active.totalAmount || 500,
-                  otpVerified: isVerified,
-                  expectedOtp: active.workerOtp,
-                });
-                setActiveJobStatus(isVerified ? 'IN PROGRESS' : 'ON THE WAY');
+                const isDeclined = typeof window !== 'undefined' && localStorage.getItem('sahyog_declined_' + active.id) === 'true';
+                if (!isDeclined) {
+                  const isVerified = active.status === 'IN_PROGRESS' || !!active.otpVerifiedAt;
+                  const isAcceptedLocally = typeof window !== 'undefined' && localStorage.getItem('sahyog_accepted_' + active.id) === 'true';
+                  const isAcceptedStatus = active.status === 'ACCEPTED' || active.status === 'IN_PROGRESS' || isAcceptedLocally;
+
+                  setActiveBooking({
+                    id: active.id,
+                    bookingCode: active.bookingCode,
+                    customerName: active.customer?.fullName || active.customerName || 'Verified Customer',
+                    customerPhone: active.customer?.phone || active.customerPhone || '+919876543210',
+                    service: active.serviceTitle || 'Home Service Specialist',
+                    address: active.serviceLocation || 'Ahmedabad, Gujarat',
+                    amount: active.totalAmount || 500,
+                    otpVerified: isVerified,
+                    expectedOtp: active.workerOtp,
+                  });
+
+                  if (isVerified) {
+                    setActiveJobStatus('IN PROGRESS');
+                  } else if (isAcceptedStatus) {
+                    setActiveJobStatus('ON THE WAY');
+                  } else {
+                    setActiveJobStatus('NEW_REQUEST');
+                  }
+                }
               } else {
                 // Check if completed
                 const completed = data.bookings.find((b: any) => b.status === 'COMPLETED');
@@ -381,6 +395,57 @@ export default function WorkerDashboard() {
     } finally {
       setVerifyingOtp(false);
     }
+  };
+
+  const handleAcceptJob = async () => {
+    if (!activeBooking?.id) return;
+    setIsAccepting(true);
+    try {
+      await fetch(`/api/bookings/${activeBooking.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'ACCEPTED' })
+      });
+    } catch (e) {}
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sahyog_accepted_' + activeBooking.id, 'true');
+      localStorage.setItem('sahyog_active_job_status', 'ON_THE_WAY');
+      localStorage.setItem('sahyog-realtime-event', JSON.stringify({
+        type: 'JOB_ACCEPTED',
+        bookingId: activeBooking.id,
+        workerName: workerName || 'Worker Partner',
+        service: activeBooking.service,
+        timestamp: Date.now()
+      }));
+    }
+
+    try {
+      const channel = new BroadcastChannel('sahyog-realtime-sync');
+      channel.postMessage({
+        type: 'JOB_ACCEPTED',
+        bookingId: activeBooking.id,
+        workerName: workerName || 'Worker Partner',
+        service: activeBooking.service,
+        timestamp: Date.now()
+      });
+      channel.close();
+    } catch {}
+
+    setActiveJobStatus('ON THE WAY');
+    setIsAccepting(false);
+    setToastNotice('⚡ Job Request Accepted! Customer notified you are on the way.');
+    setTimeout(() => setToastNotice(''), 4000);
+  };
+
+  const handleDeclineJob = () => {
+    if (activeBooking?.id && typeof window !== 'undefined') {
+      localStorage.setItem('sahyog_declined_' + activeBooking.id, 'true');
+    }
+    setActiveBooking(null);
+    setActiveJobStatus('OFFLINE');
+    setToastNotice('Job request passed. Looking for new requests...');
+    setTimeout(() => setToastNotice(''), 3000);
   };
 
   const handleCompleteJob = async () => {
@@ -663,14 +728,32 @@ export default function WorkerDashboard() {
               <div className="flex items-center justify-between">
                 <h3 className="font-bold text-slate-900 text-sm flex items-center gap-1.5">
                   <Clock className="w-4 h-4 text-teal-700" />
-                  Active Assignment
+                  {activeJobStatus === 'NEW_REQUEST' ? 'Incoming Service Request' : 'Active Assignment'}
                 </h3>
-                <span className="text-[11px] font-bold border border-teal-600 bg-teal-50 text-teal-800 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-                  {activeJobStatus}
+                <span className={`text-[11px] font-bold border px-2.5 py-0.5 rounded-full uppercase tracking-wider ${
+                  activeJobStatus === 'NEW_REQUEST'
+                    ? 'border-amber-500 bg-amber-100 text-amber-900 animate-pulse'
+                    : 'border-teal-600 bg-teal-50 text-teal-800'
+                }`}>
+                  {activeJobStatus === 'NEW_REQUEST' ? '⚡ New Request' : activeJobStatus}
                 </span>
               </div>
 
-              <div className="bg-white rounded-2xl p-4 border-2 border-teal-100 shadow-sm relative overflow-hidden">
+              <div className={`bg-white rounded-2xl p-4 border-2 shadow-sm relative overflow-hidden ${
+                activeJobStatus === 'NEW_REQUEST' ? 'border-amber-400 bg-gradient-to-br from-amber-50/40 via-white to-teal-50/20' : 'border-teal-100'
+              }`}>
+                {activeJobStatus === 'NEW_REQUEST' && (
+                  <div className="mb-3 pb-2.5 border-b border-amber-200/80 flex items-center justify-between">
+                    <span className="text-xs font-black text-amber-900 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                      Customer Booked Online — Ready for You!
+                    </span>
+                    <span className="text-[10px] font-black uppercase tracking-wider bg-amber-400 text-slate-950 px-2 py-0.5 rounded-full">
+                      ACTION REQUIRED
+                    </span>
+                  </div>
+                )}
+
                 <div className="absolute top-0 right-0 w-24 h-24 bg-teal-50 rounded-full -mr-10 -mt-10 pointer-events-none" />
 
                 <div className="flex items-start justify-between relative z-10">
@@ -692,43 +775,64 @@ export default function WorkerDashboard() {
                   <p className="flex items-center gap-2">
                     <MapPin className="w-3.5 h-3.5 text-teal-700 flex-shrink-0" />
                     <span className="font-medium text-slate-800">{activeBooking.address}</span>
-                    <span className="text-[11px] text-slate-400">• 2.4 km away</span>
+                    <span className="text-[11px] text-slate-400">• 1.8 km away</span>
                   </p>
                   <p className="flex items-center gap-2">
                     <Calendar className="w-3.5 h-3.5 text-teal-700 flex-shrink-0" />
-                    <span>Scheduled: <b>Today (Active)</b></span>
+                    <span>Scheduled: <b>Today (Ready to Dispatch)</b></span>
                   </p>
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex items-center gap-2.5 mt-4 pt-3 border-t border-slate-100">
-                  <button 
-                    type="button"
-                    onClick={() => setShowDirectionsModal(true)}
-                    className="flex-1 bg-teal-700 hover:bg-teal-800 text-white py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition active:scale-98"
-                  >
-                    <Navigation className="w-4 h-4" />
-                    <span>Open Directions</span>
-                  </button>
+                {activeJobStatus === 'NEW_REQUEST' ? (
+                  <div className="flex items-center gap-2.5 mt-4 pt-3 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={handleAcceptJob}
+                      disabled={isAccepting}
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-3 px-4 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md transition active:scale-98 cursor-pointer"
+                    >
+                      {isAccepting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                      <span>Accept Job (जॉब स्वीकार करें)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDeclineJob}
+                      className="py-3 px-4 border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs rounded-xl transition cursor-pointer"
+                    >
+                      Decline
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2.5 mt-4 pt-3 border-t border-slate-100">
+                    <button 
+                      type="button"
+                      onClick={() => setShowDirectionsModal(true)}
+                      className="flex-1 bg-teal-700 hover:bg-teal-800 text-white py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition active:scale-98"
+                    >
+                      <Navigation className="w-4 h-4" />
+                      <span>Open Directions</span>
+                    </button>
 
-                  <button 
-                    type="button"
-                    onClick={() => setShowContactModal(true)}
-                    className="p-2.5 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center justify-center transition"
-                    title="Contact Customer"
-                  >
-                    <Phone className="w-4 h-4 text-teal-700" />
-                  </button>
+                    <button 
+                      type="button"
+                      onClick={() => setShowContactModal(true)}
+                      className="p-2.5 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center justify-center transition"
+                      title="Contact Customer"
+                    >
+                      <Phone className="w-4 h-4 text-teal-700" />
+                    </button>
 
-                  <Link
-                    href="/chat/1?role=worker"
-                    className="p-2.5 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center justify-center transition relative"
-                    title="Chat with Customer"
-                  >
-                    <MessageSquare className="w-4 h-4 text-teal-700" />
-                    <span className="w-2 h-2 bg-amber-500 rounded-full absolute top-1 right-1" />
-                  </Link>
-                </div>
+                    <Link
+                      href="/chat/1?role=worker"
+                      className="p-2.5 border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-xl flex items-center justify-center transition relative"
+                      title="Chat with Customer"
+                    >
+                      <MessageSquare className="w-4 h-4 text-teal-700" />
+                      <span className="w-2 h-2 bg-amber-500 rounded-full absolute top-1 right-1" />
+                    </Link>
+                  </div>
+                )}
 
                 {/* 4-Digit Arrival OTP & Job Completion Trigger */}
                 <div className="mt-3">

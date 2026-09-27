@@ -27,6 +27,7 @@ interface JobBooking {
   otpVerified?: boolean;
   expectedOtp?: string;
   workerName?: string;
+  isAccepted?: boolean;
 }
 
 const initialJobs: JobBooking[] = [
@@ -191,6 +192,7 @@ export default function WorkerBookingsPage() {
                 otpVerified: b.status === 'IN_PROGRESS' || !!b.otpVerifiedAt,
                 expectedOtp: b.workerOtp,
                 workerName: b.workerProfile?.user?.fullName || b.workerName,
+                isAccepted: b.status === 'ACCEPTED' || b.status === 'IN_PROGRESS' || b.status === 'COMPLETED' || (typeof window !== 'undefined' && localStorage.getItem('sahyog_accepted_' + b.id) === 'true'),
               }));
               setJobs(mapped);
             } else {
@@ -270,6 +272,41 @@ export default function WorkerBookingsPage() {
     } finally {
       setVerifyingOtp(false);
     }
+  };
+
+  const handleAcceptJob = async (job: JobBooking) => {
+    try {
+      await fetch(`/api/bookings/${job.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'ACCEPTED' })
+      });
+    } catch {}
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sahyog_accepted_' + job.id, 'true');
+      localStorage.setItem('sahyog-realtime-event', JSON.stringify({
+        type: 'JOB_ACCEPTED',
+        bookingId: job.id,
+        workerName: job.workerName || 'Worker Partner',
+        service: job.service,
+        timestamp: Date.now()
+      }));
+    }
+
+    try {
+      const channel = new BroadcastChannel('sahyog-realtime-sync');
+      channel.postMessage({
+        type: 'JOB_ACCEPTED',
+        bookingId: job.id,
+        workerName: job.workerName || 'Worker Partner',
+        service: job.service,
+        timestamp: Date.now()
+      });
+      channel.close();
+    } catch {}
+
+    setJobs(prev => prev.map(j => j.id === job.id ? { ...j, isAccepted: true } : j));
   };
 
   const handleFinishAndCollect = (job: JobBooking) => {
@@ -512,7 +549,16 @@ export default function WorkerBookingsPage() {
                         </Link>
                       </div>
 
-                      {job.status === 'ACTIVE' || job.status === 'UPCOMING' ? (
+                      {!job.isAccepted ? (
+                        <button
+                          type="button"
+                          onClick={() => handleAcceptJob(job)}
+                          className="w-full py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl transition flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+                        >
+                          <CheckCircle2 className="w-4 h-4 text-white" />
+                          <span>Accept Job (जॉब स्वीकार करें)</span>
+                        </button>
+                      ) : job.status === 'ACTIVE' || job.status === 'UPCOMING' ? (
                         <button
                           type="button"
                           onClick={() => {

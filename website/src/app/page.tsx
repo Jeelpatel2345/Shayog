@@ -581,7 +581,7 @@ export default function HomePage() {
                     </div>
 
                     <Link
-                      href="/community"
+                      href={'/community?societyId=' + s.id}
                       className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition flex items-center gap-1.5 shadow-sm"
                     >
                       <span>Deploy Squad</span>

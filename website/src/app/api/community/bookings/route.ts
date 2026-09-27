@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { defaultActiveCommunityBooking, CommunityBooking } from '@/data/communityData';
 
-// Cache fallback for community bookings with multi-worker crew data
-let communityBookingsStore: CommunityBooking[] = [defaultActiveCommunityBooking];
+// Shared global store for community bookings with multi-worker crew data
+if (!(globalThis as any).__sahyog_community_bookings) {
+  (globalThis as any).__sahyog_community_bookings = [defaultActiveCommunityBooking];
+}
+const getCommunityStore = (): CommunityBooking[] => (globalThis as any).__sahyog_community_bookings;
 
 export async function GET(request: NextRequest) {
   try {
@@ -44,7 +47,7 @@ export async function GET(request: NextRequest) {
       }));
     } catch {}
 
-    const all = [...dbCommunityBookings, ...communityBookingsStore];
+    const all = [...dbCommunityBookings, ...getCommunityStore()];
     const map = new Map();
     all.forEach(item => map.set(item.id, item));
     let result = Array.from(map.values());
@@ -55,7 +58,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, bookings: result });
   } catch (error: any) {
-    return NextResponse.json({ error: error?.message || 'Failed to fetch community bookings', bookings: communityBookingsStore }, { status: 500 });
+    return NextResponse.json({ error: error?.message || 'Failed to fetch community bookings', bookings: getCommunityStore() }, { status: 500 });
   }
 }
 
@@ -87,7 +90,7 @@ export async function POST(request: NextRequest) {
       createdAt: new Date().toISOString()
     };
 
-    communityBookingsStore.unshift(newBooking);
+    getCommunityStore().unshift(newBooking);
 
     // Also persist into PostgreSQL Prisma Booking table
     try {

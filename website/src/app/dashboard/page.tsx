@@ -36,6 +36,7 @@ export default function UnifiedDashboardPage() {
     'Deep Cleaning'
   ]);
   const [partnerActiveBooking, setPartnerActiveBooking] = useState<any>(null);
+  const [partnerJobAccepted, setPartnerJobAccepted] = useState(false);
   const [otpInput, setOtpInput] = useState('');
   const [otpVerified, setOtpVerified] = useState(false);
   const [partnerPaymentConfirmed, setPartnerPaymentConfirmed] = useState(false);
@@ -84,6 +85,8 @@ export default function UnifiedDashboardPage() {
           const parsedBookings = JSON.parse(userBookingsRaw);
           if (Array.isArray(parsedBookings) && parsedBookings.length > 0) {
             setPartnerActiveBooking(parsedBookings[0]);
+            const isAcc = parsedBookings[0].status === 'ACCEPTED' || parsedBookings[0].status === 'IN_PROGRESS' || localStorage.getItem('sahyog_accepted_' + parsedBookings[0].id) === 'true';
+            setPartnerJobAccepted(isAcc);
           }
         } catch {}
       }
@@ -111,12 +114,15 @@ export default function UnifiedDashboardPage() {
         .catch(() => {});
 
       fetch('/api/bookings')
-        .then((res) => (res.ok ? res.json() : []))
+        .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
-          if (Array.isArray(data)) {
-            setBookings(data);
-            if (data.length > 0 && !partnerActiveBooking) {
-              setPartnerActiveBooking(data[0]);
+          const list = Array.isArray(data) ? data : (data?.bookings || []);
+          if (Array.isArray(list)) {
+            setBookings(list);
+            if (list.length > 0 && !partnerActiveBooking) {
+              setPartnerActiveBooking(list[0]);
+              const isAcc = list[0].status === 'ACCEPTED' || list[0].status === 'IN_PROGRESS' || (typeof window !== 'undefined' && localStorage.getItem('sahyog_accepted_' + list[0].id) === 'true');
+              setPartnerJobAccepted(isAcc);
             }
           }
           setLoading(false);
@@ -149,6 +155,42 @@ export default function UnifiedDashboardPage() {
       localStorage.setItem('sahyog_worker_verified', String(nextState));
     }
     setPartnerToast(nextState ? '✓ KYC Approved! You are now eligible to accept jobs.' : 'KYC Status reset to Pending.');
+    setTimeout(() => setPartnerToast(''), 4000);
+  };
+
+  const handleAcceptPartnerJob = async () => {
+    if (!partnerActiveBooking?.id) return;
+    try {
+      await fetch(`/api/bookings/${partnerActiveBooking.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'ACCEPTED' })
+      });
+    } catch {}
+
+    setPartnerJobAccepted(true);
+    setPartnerToast('⚡ Job Request Accepted! Customer notified you are on the way.');
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sahyog_accepted_' + partnerActiveBooking.id, 'true');
+      localStorage.setItem('sahyog-realtime-event', JSON.stringify({
+        type: 'JOB_ACCEPTED',
+        bookingId: partnerActiveBooking.id,
+        workerName: clientName || 'Service Partner',
+        timestamp: Date.now()
+      }));
+    }
+
+    try {
+      const channel = new BroadcastChannel('sahyog-realtime-sync');
+      channel.postMessage({
+        type: 'JOB_ACCEPTED',
+        bookingId: partnerActiveBooking.id,
+        workerName: clientName || 'Service Partner',
+        timestamp: Date.now()
+      });
+      channel.close();
+    } catch {}
     setTimeout(() => setPartnerToast(''), 4000);
   };
 
@@ -902,8 +944,14 @@ export default function UnifiedDashboardPage() {
                         <span className="text-xs font-black font-mono text-slate-900 bg-slate-100 px-2 py-0.5 rounded-md">
                           #{partnerActiveBooking?.id?.slice(0, 8) || 'SY-9021'}
                         </span>
-                        <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-2.5 py-0.5 rounded-full">
-                          {otpVerified ? 'IN PROGRESS' : 'ASSIGNED & EN ROUTE'}
+                        <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
+                          !partnerJobAccepted
+                            ? 'text-amber-900 bg-amber-100 animate-pulse'
+                            : otpVerified
+                              ? 'text-emerald-800 bg-emerald-100'
+                              : 'text-teal-800 bg-teal-100'
+                        }`}>
+                          {!partnerJobAccepted ? '⚡ NEW REQUEST WAITING' : otpVerified ? 'IN PROGRESS' : 'ASSIGNED & EN ROUTE'}
                         </span>
                       </div>
                       <h3 className="text-lg font-black text-slate-900 mt-1">
@@ -937,6 +985,29 @@ export default function UnifiedDashboardPage() {
                       <strong className="text-teal-700 font-bold">UPI QR / Escrow</strong>
                     </div>
                   </div>
+
+                  {/* Accept Job Request Banner if not accepted */}
+                  {!partnerJobAccepted && (
+                    <div className="bg-amber-50 border-2 border-amber-300 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+                      <div>
+                        <p className="font-bold text-amber-950 text-xs flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                          New Service Request Incoming!
+                        </p>
+                        <p className="text-[11px] text-amber-800 mt-0.5">
+                          Customer booked this service online and is waiting for your confirmation.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleAcceptPartnerJob}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs px-5 py-2.5 rounded-xl transition flex items-center justify-center gap-1.5 shadow-md cursor-pointer shrink-0"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Accept Job (स्वीकार करें)</span>
+                      </button>
+                    </div>
+                  )}
 
                   {/* Step 1: Start Job with Customer Arrival OTP */}
                   <div className="space-y-3 pt-2">
