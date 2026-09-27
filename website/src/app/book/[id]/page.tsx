@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
   ArrowLeft, Star, ShieldCheck, Clock, MapPin, Calendar, 
   CreditCard, CheckCircle2, ChevronRight, AlertCircle, Loader2, 
-  Sparkles, Check 
+  Sparkles, Check, Lock, ArrowRight 
 } from 'lucide-react';
 import { allWorkers } from '@/data/workersData';
 import { useAuthStore } from '@/store/authStore';
@@ -19,15 +19,28 @@ export default function BookWorkerPage() {
 
   const worker = allWorkers.find((w) => w.id === workerId) || allWorkers[0];
 
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [checkedAuth, setCheckedAuth] = useState(false);
   const [selectedDate, setSelectedDate] = useState('Tomorrow');
   const [selectedTime, setSelectedTime] = useState('10:00 AM');
   const [duration, setDuration] = useState<'hourly' | 'halfDay' | 'fullDay'>('hourly');
   const [hours, setHours] = useState(2);
   const [serviceAddress, setServiceAddress] = useState('B/402, Shanti Heights, Sector 12, Navrangpura, Ahmedabad');
-  const [customerPhone, setCustomerPhone] = useState(phone || '98765 43210');
+  const [customerPhone, setCustomerPhone] = useState('');
   const [notes, setNotes] = useState('');
   const [paymentTiming, setPaymentTiming] = useState<'AFTER_SERVICE' | 'PAY_NOW'>('AFTER_SERVICE');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const logged = localStorage.getItem('sahyog-logged-in') === 'true';
+      setIsLoggedIn(logged);
+      setCheckedAuth(true);
+
+      const savedPhone = localStorage.getItem('sahyog-user-phone') || phone || '';
+      if (savedPhone) setCustomerPhone(savedPhone);
+    }
+  }, [phone]);
 
   // Price Calculation
   const calculation = useMemo(() => {
@@ -48,6 +61,11 @@ export default function BookWorkerPage() {
   }, [duration, hours, worker.rate]);
 
   const handleProceedToPayment = async () => {
+    if (!isLoggedIn && (typeof window !== 'undefined' && localStorage.getItem('sahyog-logged-in') !== 'true')) {
+      router.push(`/login?redirect=/book/${workerId}`);
+      return;
+    }
+
     setLoading(true);
     const tempId = 'bk_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     let finalBookingId = tempId;
@@ -218,6 +236,32 @@ export default function BookWorkerPage() {
               <h2 className="text-xl font-black text-slate-900 border-b border-slate-100 pb-4">
                 Schedule & Customize Your Service
               </h2>
+
+              {/* Login Gate Notice for Unauthenticated First-Time Visitors */}
+              {checkedAuth && !isLoggedIn && (
+                <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-900 flex items-center justify-center shrink-0">
+                      <Lock className="w-5 h-5 text-amber-700" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs sm:text-sm font-black text-amber-950">
+                        Login Required to Book {worker.name}
+                      </h4>
+                      <p className="text-[11px] text-amber-800">
+                        Please sign in with your mobile number to confirm your booking and receive arrival OTPs.
+                      </p>
+                    </div>
+                  </div>
+                  <Link
+                    href={`/login?redirect=/book/${workerId}`}
+                    className="bg-teal-700 hover:bg-teal-800 text-white font-bold text-xs px-4 py-2 rounded-xl transition shadow-xs shrink-0 flex items-center gap-1.5"
+                  >
+                    <span>Sign In with OTP</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
+              )}
 
               {/* Step 1: Select Date */}
               <div className="space-y-2">
@@ -445,35 +489,46 @@ export default function BookWorkerPage() {
               </div>
 
               {/* CTA Button */}
-              <button
-                type="button"
-                disabled={loading}
-                onClick={handleProceedToPayment}
-                className={`w-full font-black py-4 rounded-xl shadow-lg transition flex items-center justify-center gap-2 text-sm cursor-pointer disabled:opacity-60 ${
-                  paymentTiming === 'AFTER_SERVICE'
-                    ? 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-emerald-900/10'
-                    : 'bg-teal-700 hover:bg-teal-800 text-white shadow-teal-900/10'
-                }`}
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    <span>Confirming Booking with OTP Security...</span>
-                  </>
-                ) : paymentTiming === 'AFTER_SERVICE' ? (
-                  <>
-                    <ShieldCheck className="w-5 h-5 text-amber-300" />
-                    <span>Confirm Booking (Pay ₹{calculation.total} After Service)</span>
-                    <ChevronRight className="w-4 h-4" />
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 text-amber-300" />
-                    <span>Proceed to 5-Min UPI QR Payment (₹{calculation.total})</span>
-                    <ChevronRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
+              {!isLoggedIn ? (
+                <Link
+                  href={`/login?redirect=/book/${workerId}`}
+                  className="w-full bg-teal-700 hover:bg-teal-800 text-white font-black py-4 rounded-xl shadow-lg transition flex items-center justify-center gap-2 text-sm cursor-pointer"
+                >
+                  <Lock className="w-4 h-4 text-amber-300" />
+                  <span>Sign In with OTP to Confirm Booking</span>
+                  <ArrowRight className="w-4 h-4 ml-1" />
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={handleProceedToPayment}
+                  className={`w-full font-black py-4 rounded-xl shadow-lg transition flex items-center justify-center gap-2 text-sm cursor-pointer disabled:opacity-60 ${
+                    paymentTiming === 'AFTER_SERVICE'
+                      ? 'bg-emerald-700 hover:bg-emerald-800 text-white shadow-emerald-900/10'
+                      : 'bg-teal-700 hover:bg-teal-800 text-white shadow-teal-900/10'
+                  }`}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      <span>Confirming Booking with OTP Security...</span>
+                    </>
+                  ) : paymentTiming === 'AFTER_SERVICE' ? (
+                    <>
+                      <ShieldCheck className="w-5 h-5 text-amber-300" />
+                      <span>Confirm Booking (Pay ₹{calculation.total} After Service)</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4 text-amber-300" />
+                      <span>Proceed to 5-Min UPI QR Payment (₹{calculation.total})</span>
+                      <ChevronRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </div>

@@ -95,6 +95,12 @@ function WorkerCommunityDashboardContent() {
   // STRICT COMMUNITY DASHBOARD LOCK
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      const logged = localStorage.getItem('sahyog-logged-in') === 'true';
+      if (!logged) {
+        window.location.replace('/login?role=worker');
+        return;
+      }
+
       const role = localStorage.getItem('sahyog-role');
       const mode = localStorage.getItem('sahyog_worker_mode');
       if (role === 'CUSTOMER') {
@@ -107,7 +113,6 @@ function WorkerCommunityDashboardContent() {
       }
       localStorage.setItem('sahyog_worker_mode', 'COMMUNITY');
       localStorage.setItem('sahyog-role', 'WORKER');
-      localStorage.setItem('sahyog-logged-in', 'true');
 
       // Request browser push notification permission gracefully
       requestNotificationPermission();

@@ -34,6 +34,14 @@ export default function WebProfilePage() {
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const logged = localStorage.getItem('sahyog-logged-in') === 'true';
+      if (!logged) {
+        router.replace('/login?redirect=/profile');
+        return;
+      }
+    }
+
     const savedName = fullName || (typeof window !== 'undefined' ? localStorage.getItem('sahyog-user-name') : '') || (phone ? `User ${phone.slice(-4)}` : '');
     const savedPhone = phone || (typeof window !== 'undefined' ? localStorage.getItem('sahyog-user-phone') : '') || '';
     const savedEmail = (typeof window !== 'undefined' ? localStorage.getItem('sahyog-user-email') : '') || '';

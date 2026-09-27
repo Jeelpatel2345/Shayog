@@ -1,5 +1,5 @@
 'use client';
-import { useState, useMemo, Suspense } from 'react';
+import { useState, useMemo, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
@@ -75,6 +75,15 @@ function PaymentContent({ params }: { params: { id: string } }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [showQrModal, setShowQrModal] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const logged = localStorage.getItem('sahyog-logged-in') === 'true';
+      if (!logged) {
+        router.replace(`/login?redirect=/customer/payment/${params.id}`);
+      }
+    }
+  }, [params.id, router]);
 
   const bookingCode = 'SY-9021';
   const upiId = 'sahyogtrust@upi';

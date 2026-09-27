@@ -259,10 +259,10 @@ export default function HomePage() {
               </p>
             </div>
             <Link
-              href={scope === 'COMMUNITY' ? '/services?scope=community' : '/services'}
+              href={scope === 'COMMUNITY' ? '/community' : '/services'}
               className="inline-flex items-center gap-2 text-sm font-bold text-teal-700 hover:text-teal-800 transition"
             >
-              <span>{scope === 'COMMUNITY' ? 'View all society packages' : 'View all 100 workers'}</span>
+              <span>{scope === 'COMMUNITY' ? 'Open Dedicated Society Hub' : 'View all 100 workers'}</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
@@ -334,7 +334,7 @@ export default function HomePage() {
                       Estimated Duration: <b>{pkg.durationHours} Hours</b>
                     </span>
                     <Link
-                      href={'/services?search=' + encodeURIComponent(pkg.tradeCategory)}
+                      href="/community"
                       className="inline-flex items-center gap-2 text-xs font-black bg-teal-700 hover:bg-teal-800 text-white px-4 py-2.5 rounded-xl shadow-xs transition"
                     >
                       <span>Book Squad Service</span>

@@ -56,6 +56,12 @@ export default function WorkerDashboard() {
   // Individual workers can ONLY see the Individual Dashboard and cannot access the community dashboard!
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      const logged = localStorage.getItem('sahyog-logged-in') === 'true';
+      if (!logged) {
+        window.location.replace('/login?role=worker');
+        return;
+      }
+
       const role = localStorage.getItem('sahyog-role');
       const mode = localStorage.getItem('sahyog_worker_mode');
       if (role === 'CUSTOMER') {
@@ -69,7 +75,6 @@ export default function WorkerDashboard() {
 
       localStorage.setItem('sahyog_worker_mode', 'INDIVIDUAL');
       localStorage.setItem('sahyog-role', 'WORKER');
-      localStorage.setItem('sahyog-logged-in', 'true');
       requestNotificationPermission();
 
       const currentWorkerName = localStorage.getItem('sahyog-user-name') || 'Sunita Mehra';

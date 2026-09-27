@@ -38,6 +38,16 @@ export default function PaymentPage() {
   const upiString = `upi://pay?pa=${upiId}&pn=SahYog%20Home%20Services&am=${totalAmount}&cu=INR&tn=Booking%20${bookingId}`;
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(upiString)}&margin=1`;
 
+  // Auth protection: user must be logged in
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const logged = localStorage.getItem('sahyog-logged-in') === 'true';
+      if (!logged) {
+        router.replace(`/login?redirect=/payment/${bookingId}`);
+      }
+    }
+  }, [bookingId, router]);
+
   // Countdown timer effect
   useEffect(() => {
     if (timeLeft <= 0) return;

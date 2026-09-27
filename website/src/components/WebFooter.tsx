@@ -51,7 +51,8 @@ export default function WebFooter() {
             </h3>
             <ul className="space-y-2.5 text-xs font-medium">
               <li><Link href="/" className="hover:text-amber-300 transition">Home</Link></li>
-              <li><Link href="/services" className="hover:text-amber-300 transition">Browse 100 Workers</Link></li>
+              <li><Link href="/services" className="hover:text-amber-300 transition">Individual Home Services</Link></li>
+              <li><Link href="/community" className="hover:text-amber-300 transition text-amber-300 font-semibold">🏢 Community & Society Services</Link></li>
               <li><Link href="/dashboard" className="hover:text-amber-300 transition">Customer Dashboard</Link></li>
               <li><Link href="/bookings" className="hover:text-amber-300 transition">My Service Bookings</Link></li>
               <li><Link href="/login" className="hover:text-amber-300 transition">Partner / Worker Login</Link></li>

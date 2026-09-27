@@ -38,6 +38,12 @@ export default function UnifiedDashboardPage() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      const loggedIn = localStorage.getItem('sahyog-logged-in') === 'true';
+      if (!loggedIn) {
+        router.replace('/login?redirect=/dashboard');
+        return;
+      }
+
       const saved = localStorage.getItem('sahyog-user-name');
       if (saved) setClientName(saved);
 

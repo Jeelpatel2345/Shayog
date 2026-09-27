@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { 
   Bell, Search, MapPin, Star, ChevronRight, ShieldCheck, 
   Calendar, User, Sparkles, Wrench, Zap, Cpu, Hammer, 
@@ -33,6 +34,7 @@ const categoryIcons: Record<string, any> = {
 };
 
 export default function CustomerDashboard() {
+  const router = useRouter();
   const { fullName, phone } = useAuthStore();
   const [activeLang, setActiveLang] = useState<'EN' | 'HI' | 'GU'>('EN');
   const [searchQuery, setSearchQuery] = useState('');
@@ -555,8 +557,12 @@ export default function CustomerDashboard() {
   // Lock Customer Role & Hydrate profile
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      const isLoggedIn = localStorage.getItem('sahyog-logged-in') === 'true';
+      if (!isLoggedIn) {
+        router.replace('/welcome');
+        return;
+      }
       localStorage.setItem('sahyog-role', 'CUSTOMER');
-      localStorage.setItem('sahyog-logged-in', 'true');
       const saved = localStorage.getItem('sahyog-user-name');
       if (saved) setClientName(saved);
 

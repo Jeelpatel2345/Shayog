@@ -1,6 +1,7 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { 
   ArrowLeft, Bell, Calendar, MapPin, Clock, AlertTriangle, 
   CheckCircle2, XCircle, ChevronRight, ShieldCheck, User, 
@@ -65,12 +66,22 @@ const initialBookings: BookingItem[] = [
 ];
 
 export default function BookingsListPage() {
+  const router = useRouter();
   const [bookings, setBookings] = useState<BookingItem[]>(initialBookings);
   const [activeTab, setActiveTab] = useState<'all' | 'active' | 'completed'>('all');
   const [cancellingBooking, setCancellingBooking] = useState<BookingItem | null>(null);
   const [selectedChatBooking, setSelectedChatBooking] = useState<BookingItem | null>(null);
   const [cancelReason, setCancelReason] = useState('Change of plans');
   const [cancelNotification, setCancelNotification] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const logged = localStorage.getItem('sahyog-logged-in') === 'true';
+      if (!logged) {
+        router.replace('/login?redirect=/customer/bookings');
+      }
+    }
+  }, [router]);
 
   const handleConfirmCancel = () => {
     if (!cancellingBooking) return;

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { 
   ShieldCheck, Phone, CheckCircle, ArrowRight, Lock, 
@@ -9,8 +9,9 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 
-export default function LoginPage() {
+function LoginFormContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { setAuth } = useAuthStore();
 
   const [step, setStep] = useState<'PHONE' | 'OTP'>('PHONE');
@@ -96,7 +97,12 @@ export default function LoginPage() {
         }
       }
 
-      router.push('/dashboard');
+      const redirectUrl = searchParams.get('redirect');
+      if (redirectUrl) {
+        router.push(redirectUrl);
+      } else {
+        router.push('/dashboard');
+      }
     } catch (err: any) {
       setErrorMsg(err.message || 'Incorrect verification code. Please check and retry.');
     } finally {
@@ -416,5 +422,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-100 flex items-center justify-center text-slate-500 font-bold">Loading Secure Login...</div>}>
+      <LoginFormContent />
+    </Suspense>
   );
 }

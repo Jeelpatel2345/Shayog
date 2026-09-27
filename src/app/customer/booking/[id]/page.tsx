@@ -1,10 +1,11 @@
 'use client';
-import { useState, useMemo, Suspense } from 'react';
+
+import { useState, useMemo, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   ArrowLeft, Star, MapPin, ShieldCheck, Info, ChevronDown, 
-  Calendar, Clock, User, CheckCircle2, ChevronRight, Sparkles 
+  Calendar, Clock, User, CheckCircle2, ChevronRight, Sparkles, Lock 
 } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
 import { allWorkers } from '@/data/workersData';
@@ -26,8 +27,20 @@ const times = [
 ];
 
 function BookingContent({ params }: { params: { id: string } }) {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const initialHours = parseInt(searchParams.get('hours') || '4');
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const logged = localStorage.getItem('sahyog-logged-in') === 'true';
+      setIsLoggedIn(logged);
+      if (!logged) {
+        router.replace(`/login?redirect=/customer/booking/${params.id}`);
+      }
+    }
+  }, [params.id, router]);
 
   const worker = useMemo(() => {
     return (
@@ -315,13 +328,20 @@ function BookingContent({ params }: { params: { id: string } }) {
             <span className="text-xl sm:text-2xl font-black text-teal-800">₹ {totalPayable}</span>
           </div>
 
-          <Link
-            href={`/customer/payment/${worker.id}?amount=${totalPayable}&hours=${durationHours}`}
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== 'undefined' && localStorage.getItem('sahyog-logged-in') !== 'true') {
+                router.push(`/login?redirect=/customer/booking/${worker.id}`);
+                return;
+              }
+              router.push(`/customer/payment/${worker.id}?amount=${totalPayable}&hours=${durationHours}`);
+            }}
             className="bg-teal-700 hover:bg-teal-800 active:scale-[0.98] text-white px-6 sm:px-12 py-3.5 rounded-2xl font-bold text-xs sm:text-base flex items-center gap-1.5 sm:gap-2 shadow-lg shadow-teal-900/20 transition cursor-pointer"
           >
             <span>Proceed to UPI Payment</span>
             <ChevronRight className="w-4 h-4" />
-          </Link>
+          </button>
         </div>
       </div>
     </div>

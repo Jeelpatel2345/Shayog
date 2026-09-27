@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { 
   Calendar, Clock, MapPin, CheckCircle, ArrowRight, 
   ShieldCheck, AlertCircle, Sparkles, ChevronRight, Phone, 
@@ -10,6 +11,7 @@ import {
 import WorkerChatDrawer from '@/components/WorkerChatDrawer';
 
 export default function MyBookingsPage() {
+  const router = useRouter();
   const [bookings, setBookings] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<'ALL' | 'ACTIVE' | 'COMPLETED'>('ALL');
   const [loading, setLoading] = useState(true);
@@ -18,6 +20,11 @@ export default function MyBookingsPage() {
   const loadBookings = () => {
     let localList: any[] = [];
     if (typeof window !== 'undefined') {
+      const logged = localStorage.getItem('sahyog-logged-in') === 'true';
+      if (!logged) {
+        router.replace('/login?redirect=/bookings');
+        return;
+      }
       try {
         const raw = localStorage.getItem('sahyog-user-bookings');
         if (raw) {

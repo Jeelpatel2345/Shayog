@@ -33,6 +33,15 @@ export default function CustomerCommunityDashboard() {
   const [copiedOtp, setCopiedOtp] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const logged = localStorage.getItem('sahyog-logged-in') === 'true';
+      if (!logged) {
+        router.replace('/login?redirect=/customer/community');
+      }
+    }
+  }, [router]);
+
   // Booking Modal State
   const [bookingModalPkg, setBookingModalPkg] = useState<CommunityPackage | null>(null);
   const [selectedDate, setSelectedDate] = useState('Tomorrow');

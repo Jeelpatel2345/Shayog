@@ -1,6 +1,6 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { 
   Globe, ChevronRight, Shield, Lock, CheckCircle, Smartphone, 
@@ -11,8 +11,9 @@ import {
 import { useAuthStore } from '@/store/authStore';
 import { registeredSocieties, communityWorkerTypeOptions } from '@/data/communityData';
 
-export default function LoginPage() {
+function LoginFormContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { setAuth } = useAuthStore();
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
@@ -344,7 +345,12 @@ export default function LoginPage() {
       if (assignedRole === 'ADMIN') {
         router.push('/admin/overview');
       } else {
-        router.push('/customer/dashboard');
+        const redirectUrl = searchParams.get('redirect');
+        if (redirectUrl) {
+          router.push(redirectUrl);
+        } else {
+          router.push('/customer/dashboard');
+        }
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Verification failed. Try again.');
@@ -1149,5 +1155,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-100 flex items-center justify-center text-slate-500 font-bold">Loading Secure Login...</div>}>
+      <LoginFormContent />
+    </Suspense>
   );
 }

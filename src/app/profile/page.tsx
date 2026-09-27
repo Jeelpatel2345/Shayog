@@ -39,6 +39,12 @@ export default function ProfilePage() {
   // Load from state and localStorage on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      const logged = localStorage.getItem('sahyog-logged-in') === 'true';
+      if (!logged) {
+        router.replace('/login?redirect=/profile');
+        return;
+      }
+
       const ua = navigator.userAgent;
       const isInsideApp = 
         ua.includes('SahYogApp') || 
